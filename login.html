@@ -2,25 +2,40 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>Login | Sistema de Piscinas</title>
-  <link rel="stylesheet" href="css/login.css?v=20260814-3">
+  <link rel="stylesheet" href="css/login.css?v=20260814-6">
 </head>
 <body>
+  <main class="auth-card">
+    <div class="auth-brand">
+      <span class="auth-icon">💧</span>
+      <div>
+        <h1>Controle de Piscinas</h1>
+        <p>Monitoramento e automação</p>
+      </div>
+    </div>
 
-  <div class="login-container">
-    <h1>Sistema de Piscinas</h1>
-    <p>Acesso Restrito</p>
+    <div class="auth-heading">
+      <h2>Acesso ao sistema</h2>
+      <p>Entre com o usuário e a senha fornecidos pelo administrador.</p>
+    </div>
 
-    <input type="text" id="usuario" placeholder="Usuário">
-    <input type="password" id="senha" placeholder="Senha">
+    <label>Usuário
+      <input type="text" id="usuario" autocomplete="username" placeholder="Seu usuário">
+    </label>
 
-    <button onclick="login()">Entrar</button>
+    <label>Senha
+      <input type="password" id="senha" autocomplete="current-password" placeholder="Sua senha">
+    </label>
+
+    <button id="btnEntrar" type="button" onclick="login()">Entrar</button>
     <span id="erro"></span>
-  </div>
+  </main>
 
-  <script src="js/login.js?v=20260814-3"></script>
+  <script src="js/login.js?v=20260814-6"></script>
 </body>
 </html>
