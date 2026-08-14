@@ -1,4 +1,5 @@
 const API = 'https://wqjzrbhbkienlxocykcn.supabase.co/functions/v1/piscinas-api';
+const perfil = localStorage.getItem('perfil') || 'cliente';
 
 if (localStorage.getItem('logado') !== 'true' || !localStorage.getItem('token')) {
   sair();
@@ -46,11 +47,22 @@ async function carregarPiscinas() {
     piscinas.forEach(p => {
       const card = document.createElement('div');
       card.className = 'card-piscina';
-      const cliente = p.clientes?.nome ? `<br><small>${escapeHtml(p.clientes.nome)}</small>` : '';
+      const cliente = perfil === 'admin' && p.clientes?.nome ? `<br><small>${escapeHtml(p.clientes.nome)}</small>` : '';
       card.innerHTML = `<strong>${escapeHtml(p.nome)}</strong><br>${escapeHtml(p.localizacao || 'Sem localização')}${cliente}`;
       card.onclick = () => abrirAgenda(p);
       container.appendChild(card);
     });
+
+    const solicitado = Number(new URLSearchParams(window.location.search).get('piscina') || 0);
+    const alvo = solicitado ? piscinas.find(p => Number(p.id) === solicitado) : null;
+
+    if (alvo) {
+      abrirAgenda(alvo);
+    } else if (perfil !== 'admin' && piscinas.length === 1) {
+      abrirAgenda(piscinas[0]);
+    } else if (!piscinas.length) {
+      container.innerHTML = '<div class="sem-piscina">Nenhuma piscina vinculada a este usuário.</div>';
+    }
   } catch (err) {
     console.error(err);
     alert(err.message || 'Erro ao carregar piscinas');
@@ -72,15 +84,13 @@ function abrirAgenda(piscina) {
 }
 
 function voltar() {
-  if (!document.getElementById('agendaPiscina').classList.contains('hidden')) {
-    document.getElementById('agendaPiscina').classList.add('hidden');
-    document.getElementById('listaPiscinasAgenda').classList.remove('hidden');
-    piscinaSelecionada = null;
-    if (timerStatus) clearInterval(timerStatus);
-    timerStatus = null;
-  } else {
-    window.location.href = 'index.html';
-  }
+  if (timerStatus) clearInterval(timerStatus);
+  window.location.href = 'index.html';
+}
+
+function textoMedida(valor, unidade = '') {
+  if (valor === null || valor === undefined || valor === '') return 'Não informado';
+  return `${valor}${unidade ? ' ' + unidade : ''}`;
 }
 
 function preencherDadosMotor(p) {
@@ -90,6 +100,13 @@ function preencherDadosMotor(p) {
   document.getElementById('motorTensaoV').value = p.motor_tensao_v ?? '';
   document.getElementById('motorCorrenteNominal').value = p.motor_corrente_nominal_a ?? '';
   document.getElementById('motorObservacoes').value = p.motor_observacoes ?? '';
+
+  document.getElementById('resumoMotorFabricante').textContent = p.motor_fabricante || 'Não informado';
+  document.getElementById('resumoMotorModelo').textContent = p.motor_modelo || 'Não informado';
+  document.getElementById('resumoMotorPotencia').textContent = textoMedida(p.motor_potencia_cv, 'CV');
+  document.getElementById('resumoMotorTensao').textContent = textoMedida(p.motor_tensao_v, 'V');
+  document.getElementById('resumoMotorCorrente').textContent = textoMedida(p.motor_corrente_nominal_a, 'A');
+  document.getElementById('resumoMotorObservacoes').textContent = p.motor_observacoes || 'Não informado';
 }
 
 function numeroOuNull(id) {
@@ -100,8 +117,7 @@ function numeroOuNull(id) {
 }
 
 async function salvarDadosMotor() {
-  if (!piscinaSelecionada) return;
-
+  if (perfil !== 'admin' || !piscinaSelecionada) return;
   const status = document.getElementById('statusSalvarMotor');
   status.textContent = 'Salvando...';
 
@@ -121,13 +137,11 @@ async function salvarDadosMotor() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.erro || 'Erro ao salvar dados do motor');
-
     Object.assign(piscinaSelecionada, data);
     preencherDadosMotor(piscinaSelecionada);
     status.textContent = 'Dados salvos';
     setTimeout(() => { status.textContent = ''; }, 2500);
   } catch (err) {
-    console.error(err);
     status.textContent = err.message || 'Erro ao salvar';
   }
 }
@@ -149,8 +163,7 @@ async function carregarAgenda() {
           <td>${String(a.hora_inicio).slice(0,5)}</td>
           <td>${a.duracao_min} min</td>
           <td><button onclick="remover(${a.id})">Excluir</button></td>
-        </tr>
-      `;
+        </tr>`;
     });
   } catch (err) {
     console.error(err);
@@ -176,7 +189,6 @@ document.getElementById('formAgenda').addEventListener('submit', async e => {
     if (!res.ok) throw new Error(data.erro || 'Erro ao adicionar horário');
     await carregarAgenda();
   } catch (err) {
-    console.error(err);
     alert(err.message || 'Erro ao adicionar horário');
   }
 });
@@ -188,7 +200,6 @@ async function remover(id) {
     if (!res.ok) throw new Error(data.erro || 'Erro ao excluir horário');
     await carregarAgenda();
   } catch (err) {
-    console.error(err);
     alert(err.message || 'Erro ao excluir horário');
   }
 }
@@ -199,15 +210,9 @@ function diaTexto(d) {
 
 function mostrarValor(id, valor, casas, unidade, aguardando = 'Aguardando leitura') {
   const el = document.getElementById(id);
-  if (valor === null || valor === undefined || valor === '') {
-    el.innerText = aguardando;
-    return;
-  }
+  if (valor === null || valor === undefined || valor === '') return el.innerText = aguardando;
   const numero = Number(valor);
-  if (!Number.isFinite(numero)) {
-    el.innerText = aguardando;
-    return;
-  }
+  if (!Number.isFinite(numero)) return el.innerText = aguardando;
   el.innerText = `${numero.toFixed(casas)}${unidade ? ' ' + unidade : ''}`;
 }
 
@@ -224,18 +229,12 @@ function limparTelemetria(texto = 'Aguardando leitura') {
 function atualizarStatusMotor(status, motor) {
   const el = document.getElementById('statusMotor');
   el.classList.remove('ligado', 'desligado');
-
-  if (status === 'sem_controlador') {
-    el.innerText = 'SEM CONTROLADOR';
-    return;
-  }
-
+  if (status === 'sem_controlador') return el.innerText = 'SEM CONTROLADOR';
   if (status === 'offline') {
     el.innerText = 'OFFLINE';
     el.classList.add('desligado');
     return;
   }
-
   const ligado = motor === 'ligado';
   el.innerText = ligado ? 'LIGADO' : 'DESLIGADO';
   el.classList.add(ligado ? 'ligado' : 'desligado');
@@ -243,14 +242,12 @@ function atualizarStatusMotor(status, motor) {
 
 async function carregarPainelIoT() {
   if (!piscinaSelecionada) return;
-
   try {
     const res = await apiFetch(`/telemetria/${piscinaSelecionada.id}`);
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.erro || 'Erro ao carregar telemetria');
 
     const deviceLine = document.getElementById('deviceStatusLine');
-
     if (!data.conectado) {
       deviceLine.innerText = 'Controlador: não vinculado';
       atualizarStatusMotor('sem_controlador', null);
@@ -269,12 +266,9 @@ async function carregarPainelIoT() {
     mostrarValor('leituraTemperatura', l.temperatura_c, 1, '°C', 'Aguardando sensor');
     mostrarValor('leituraOrp', l.orp_mv, 0, 'mV', 'Aguardando sensor');
 
-    if (l.ultima_leitura) {
-      const dataLeitura = new Date(l.ultima_leitura);
-      document.getElementById('ultimaLeitura').innerText = `Última leitura: ${dataLeitura.toLocaleString('pt-BR')}`;
-    } else {
-      document.getElementById('ultimaLeitura').innerText = 'Nenhuma leitura recebida';
-    }
+    document.getElementById('ultimaLeitura').innerText = l.ultima_leitura
+      ? `Última leitura: ${new Date(l.ultima_leitura).toLocaleString('pt-BR')}`
+      : 'Nenhuma leitura recebida';
   } catch (err) {
     console.error(err);
     document.getElementById('deviceStatusLine').innerText = 'Controlador: erro de comunicação';
@@ -289,23 +283,21 @@ async function enviarComando(acao) {
     const res = await apiFetch(`/motor/${piscinaSelecionada.id}/${acao}`, { method: 'POST' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.erro || `Falha ao ${acao} o motor`);
-
     el.innerText = data.dispositivo === 'offline' ? 'COMANDO PENDENTE / OFFLINE' : 'AGUARDANDO ESP32...';
     setTimeout(carregarPainelIoT, 5500);
   } catch (err) {
-    console.error(err);
     alert(err.message || 'Erro na comunicação com o servidor');
   }
 }
 
-function ligarMotor() {
-  return enviarComando('ligar');
-}
+function ligarMotor() { return enviarComando('ligar'); }
+function desligarMotor() { return enviarComando('desligar'); }
 
-function desligarMotor() {
-  return enviarComando('desligar');
+if (perfil === 'admin') {
+  document.getElementById('dadosMotorEditor').classList.remove('hidden');
+  document.getElementById('btnSalvarMotor').addEventListener('click', salvarDadosMotor);
+} else {
+  document.getElementById('dadosMotorResumo').classList.remove('hidden');
 }
-
-document.getElementById('btnSalvarMotor').addEventListener('click', salvarDadosMotor);
 
 carregarPiscinas();
