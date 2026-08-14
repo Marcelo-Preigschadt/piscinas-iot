@@ -1,14 +1,19 @@
+const API = 'https://wqjzrbhbkienlxocykcn.supabase.co/functions/v1/piscinas-api';
+
 async function login() {
-  const usuario = document.getElementById('usuario').value;
+  const usuario = document.getElementById('usuario').value.trim();
   const senha = document.getElementById('senha').value;
+  const erro = document.getElementById('erro');
 
   if (!usuario || !senha) {
-    document.getElementById('erro').innerText = 'Informe usuário e senha';
+    erro.innerText = 'Informe usuário e senha';
     return;
   }
 
+  erro.innerText = '';
+
   try {
-    const res = await fetch('https://wqjzrbhbkienlxocykcn.supabase.co/functions/v1/piscinas-api/login', {
+    const res = await fetch(`${API}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ usuario, senha })
@@ -16,19 +21,22 @@ async function login() {
 
     const data = await res.json().catch(() => ({}));
 
-    if (!res.ok) {
-      document.getElementById('erro').innerText = data.erro || 'Erro ao fazer login';
+    if (!res.ok || !data.token) {
+      erro.innerText = data.erro || 'Erro ao fazer login';
       return;
     }
 
-    // Salva informações no localStorage
-    localStorage.setItem('usuario', data.usuario);
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('token_expires_at', data.expires_at || '');
+    localStorage.setItem('usuario', data.usuario || usuario);
+    localStorage.setItem('nome_usuario', data.nome || data.usuario || usuario);
+    localStorage.setItem('cliente_id', String(data.cliente_id || ''));
+    localStorage.setItem('perfil', data.perfil || 'cliente');
     localStorage.setItem('logado', 'true');
 
-    // Redireciona para a tela principal
     window.location.href = 'index.html';
   } catch (err) {
     console.error(err);
-    document.getElementById('erro').innerText = 'Não foi possível conectar ao servidor';
+    erro.innerText = 'Não foi possível conectar ao servidor';
   }
 }
