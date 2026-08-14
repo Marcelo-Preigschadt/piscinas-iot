@@ -10,7 +10,6 @@ body {
   background: #f2f2f2;
 }
 
-/* Header */
 header {
   background: #0077b6;
   color: white;
@@ -49,7 +48,6 @@ header h1 {
   background: #e0f0ff;
 }
 
-/* Main layout */
 main {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -57,7 +55,6 @@ main {
   padding: 20px;
 }
 
-/* Cards */
 .card {
   background: #ffffff;
   padding: 20px;
@@ -65,22 +62,28 @@ main {
   box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
-/* Card headings */
 .card h2 {
   color: #0077b6;
   margin-bottom: 15px;
 }
 
-/* Inputs */
-.card input {
+.card input,
+.card select {
   width: 100%;
   padding: 10px;
   margin-top: 10px;
   border: 1px solid #cccccc;
   border-radius: 5px;
+  background: white;
 }
 
-/* Buttons */
+.card label {
+  display: block;
+  margin-top: 10px;
+  font-weight: bold;
+  color: #444;
+}
+
 .card button {
   width: 100%;
   padding: 10px;
@@ -97,14 +100,15 @@ main {
   background: #005f8a;
 }
 
-/* Lista de piscinas */
-#listaPiscinas {
+#listaPiscinas,
+#listaClientes {
   list-style: none;
   padding: 0;
   margin-top: 10px;
 }
 
-#listaPiscinas li {
+#listaPiscinas li,
+#listaClientes li {
   background: #e0f7ff;
   padding: 15px;
   margin-bottom: 10px;
@@ -112,20 +116,69 @@ main {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   font-weight: bold;
 }
 
+#listaPiscinas li span,
+#listaClientes li span {
+  line-height: 1.4;
+}
+
 #listaPiscinas li button {
+  width: auto;
+  margin-top: 0;
   background: #e74c3c;
   padding: 6px 12px;
-  border-radius: 5px;
-  border: none;
-  color: white;
-  cursor: pointer;
-  transition: background 0.3s;
 }
 
 #listaPiscinas li button:hover {
   background: #c0392b;
+}
+
+.helper {
+  color: #666;
+  line-height: 1.45;
+  margin-bottom: 6px;
+}
+
+.status-line {
+  display: block;
+  margin-top: 12px;
+  min-height: 20px;
+  font-weight: bold;
+  color: #005f8a;
+}
+
+.hidden {
+  display: none !important;
+}
+
+@media (max-width: 800px) {
+  header {
+    align-items: flex-start;
+    gap: 12px;
+    flex-direction: column;
+  }
+
+  .header-right {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  main {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+
+  #listaPiscinas li,
+  #listaClientes li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  #listaPiscinas li button {
+    width: 100%;
+  }
 }
