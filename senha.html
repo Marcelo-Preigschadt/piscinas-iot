@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Primeiro acesso | Controle de Piscinas</title>
+  <link rel="stylesheet" href="css/login.css?v=20260814-6">
+</head>
+<body>
+  <main class="auth-card">
+    <div class="auth-brand">
+      <span class="auth-icon">🔐</span>
+      <div>
+        <h1>Primeiro acesso</h1>
+        <p>Controle de Piscinas</p>
+      </div>
+    </div>
+
+    <div class="auth-heading">
+      <h2>Crie sua nova senha</h2>
+      <p>A senha recebida do administrador é provisória e não poderá continuar sendo usada.</p>
+    </div>
+
+    <div class="first-access-note">
+      Por segurança, defina uma senha pessoal antes de acessar os dados da sua piscina.
+    </div>
+
+    <label>Nova senha
+      <input type="password" id="novaSenha" autocomplete="new-password" placeholder="Nova senha">
+    </label>
+
+    <label>Confirmar nova senha
+      <input type="password" id="confirmarSenha" autocomplete="new-password" placeholder="Digite novamente">
+    </label>
+
+    <div class="password-rules">Use no mínimo 6 caracteres.</div>
+
+    <button id="btnSalvarSenha" type="button">Salvar nova senha</button>
+    <span id="statusSenha"></span>
+  </main>
+
+  <script src="js/senha.js?v=20260814-6"></script>
+</body>
+</html>
