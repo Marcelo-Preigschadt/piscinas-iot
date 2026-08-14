@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Controle de Piscinas</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <header>
+    <h1>Controle de Piscinas</h1>
+    <div class="header-right">
+      <span id="userDisplay">Bem-vindo, Usuário</span>
+      <button id="btnAgenda">Agenda</button>
+      <button id="btnSair">Sair</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Cadastro de piscina -->
+    <section class="card">
+      <h2>Nova Piscina</h2>
+      <input type="text" id="nome" placeholder="Nome da piscina">
+      <input type="text" id="localizacao" placeholder="Localização">
+      <button id="btnCriar">Adicionar</button>
+    </section>
+
+    <!-- Lista de piscinas -->
+    <section class="card">
+      <h2>Piscinas Cadastradas</h2>
+      <ul id="listaPiscinas"></ul>
+    </section>
+  </main>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
