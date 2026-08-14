@@ -5,6 +5,10 @@ if (localStorage.getItem('logado') !== 'true' || !localStorage.getItem('token'))
   sair();
 }
 
+if (localStorage.getItem('primeiro_acesso') === 'true') {
+  window.location.href = 'senha.html';
+}
+
 let piscinaSelecionada = null;
 let timerStatus = null;
 
@@ -18,11 +22,17 @@ async function apiFetch(path, options = {}) {
     sair();
     throw new Error('Sessão expirada');
   }
+  if (res.status === 428) {
+    localStorage.setItem('primeiro_acesso', 'true');
+    window.location.href = 'senha.html';
+    throw new Error('Troca de senha obrigatória');
+  }
   return res;
 }
 
 function sair() {
-  ['token','token_expires_at','usuario','nome_usuario','cliente_id','perfil','logado'].forEach(k => localStorage.removeItem(k));
+  ['token','token_expires_at','usuario','nome_usuario','cliente_id','perfil','logado','primeiro_acesso','piscina_id']
+    .forEach(k => localStorage.removeItem(k));
   window.location.href = 'login.html';
 }
 
