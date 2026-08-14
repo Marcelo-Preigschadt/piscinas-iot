@@ -6,13 +6,13 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Agenda das Piscinas</title>
-  <link rel="stylesheet" href="css/agenda.css?v=20260814-4">
+  <title>Piscina | Controle de Piscinas</title>
+  <link rel="stylesheet" href="css/agenda.css?v=20260814-5">
 </head>
 <body>
 
 <header>
-  <h1>Agenda das Piscinas</h1>
+  <h1>Controle da Piscina</h1>
   <div class="header-buttons">
     <button onclick="voltar()">⬅ Voltar</button>
     <button onclick="sair()">Sair</button>
@@ -47,75 +47,56 @@
       <section class="painel-card">
         <h3>Consumo do Motor</h3>
         <div class="medidas-grid">
-          <div class="medida">
-            <span class="medida-label">Corrente</span>
-            <strong id="leituraCorrente">Aguardando leitura</strong>
-          </div>
-          <div class="medida">
-            <span class="medida-label">Potência</span>
-            <strong id="leituraPotencia">Aguardando leitura</strong>
-          </div>
-          <div class="medida">
-            <span class="medida-label">Energia</span>
-            <strong id="leituraEnergia">Aguardando leitura</strong>
-          </div>
+          <div class="medida"><span class="medida-label">Corrente</span><strong id="leituraCorrente">Aguardando leitura</strong></div>
+          <div class="medida"><span class="medida-label">Potência</span><strong id="leituraPotencia">Aguardando leitura</strong></div>
+          <div class="medida"><span class="medida-label">Energia</span><strong id="leituraEnergia">Aguardando leitura</strong></div>
         </div>
       </section>
 
       <section class="painel-card">
         <h3>Qualidade da Água</h3>
         <div class="medidas-grid">
-          <div class="medida">
-            <span class="medida-label">pH</span>
-            <strong id="leituraPh">Aguardando sensor</strong>
-          </div>
-          <div class="medida">
-            <span class="medida-label">Temperatura</span>
-            <strong id="leituraTemperatura">Aguardando sensor</strong>
-          </div>
-          <div class="medida">
-            <span class="medida-label">ORP</span>
-            <strong id="leituraOrp">Aguardando sensor</strong>
-          </div>
+          <div class="medida"><span class="medida-label">pH</span><strong id="leituraPh">Aguardando sensor</strong></div>
+          <div class="medida"><span class="medida-label">Temperatura</span><strong id="leituraTemperatura">Aguardando sensor</strong></div>
+          <div class="medida"><span class="medida-label">ORP</span><strong id="leituraOrp">Aguardando sensor</strong></div>
         </div>
         <div id="ultimaLeitura" class="ultima-leitura">Nenhuma leitura recebida</div>
       </section>
     </div>
 
-    <section class="subcard dados-motor-card">
+    <section id="dadosMotorResumo" class="subcard hidden">
       <div class="section-title-row">
         <div>
           <h3>Dados do Motor</h3>
-          <p>Cadastre as informações da bomba/motor desta piscina.</p>
+          <p>Informações cadastradas para o equipamento desta piscina.</p>
+        </div>
+      </div>
+      <div class="spec-grid">
+        <div class="spec-item"><span>Fabricante</span><strong id="resumoMotorFabricante">Não informado</strong></div>
+        <div class="spec-item"><span>Modelo</span><strong id="resumoMotorModelo">Não informado</strong></div>
+        <div class="spec-item"><span>Potência nominal</span><strong id="resumoMotorPotencia">Não informado</strong></div>
+        <div class="spec-item"><span>Tensão</span><strong id="resumoMotorTensao">Não informado</strong></div>
+        <div class="spec-item"><span>Corrente nominal</span><strong id="resumoMotorCorrente">Não informado</strong></div>
+        <div class="spec-item"><span>Observações</span><strong id="resumoMotorObservacoes">Não informado</strong></div>
+      </div>
+    </section>
+
+    <section id="dadosMotorEditor" class="subcard dados-motor-card hidden">
+      <div class="section-title-row">
+        <div>
+          <h3>Dados do Motor</h3>
+          <p>Configuração administrativa da bomba/motor desta piscina.</p>
         </div>
         <span id="statusSalvarMotor" class="save-status"></span>
       </div>
 
       <div class="motor-form-grid">
-        <div class="field-group">
-          <label for="motorFabricante">Fabricante</label>
-          <input type="text" id="motorFabricante" placeholder="Ex.: WEG">
-        </div>
-        <div class="field-group">
-          <label for="motorModelo">Modelo</label>
-          <input type="text" id="motorModelo" placeholder="Modelo do motor/bomba">
-        </div>
-        <div class="field-group">
-          <label for="motorPotenciaCv">Potência nominal (CV)</label>
-          <input type="number" id="motorPotenciaCv" step="0.01" min="0" placeholder="Ex.: 1.5">
-        </div>
-        <div class="field-group">
-          <label for="motorTensaoV">Tensão (V)</label>
-          <input type="number" id="motorTensaoV" step="1" min="0" placeholder="Ex.: 220">
-        </div>
-        <div class="field-group">
-          <label for="motorCorrenteNominal">Corrente nominal (A)</label>
-          <input type="number" id="motorCorrenteNominal" step="0.01" min="0" placeholder="Ex.: 7.2">
-        </div>
-        <div class="field-group field-wide">
-          <label for="motorObservacoes">Observações</label>
-          <input type="text" id="motorObservacoes" placeholder="Ex.: bomba da filtragem principal">
-        </div>
+        <div class="field-group"><label for="motorFabricante">Fabricante</label><input type="text" id="motorFabricante" placeholder="Ex.: WEG"></div>
+        <div class="field-group"><label for="motorModelo">Modelo</label><input type="text" id="motorModelo" placeholder="Modelo do motor/bomba"></div>
+        <div class="field-group"><label for="motorPotenciaCv">Potência nominal (CV)</label><input type="number" id="motorPotenciaCv" step="0.01" min="0" placeholder="Ex.: 1.5"></div>
+        <div class="field-group"><label for="motorTensaoV">Tensão (V)</label><input type="number" id="motorTensaoV" step="1" min="0" placeholder="Ex.: 220"></div>
+        <div class="field-group"><label for="motorCorrenteNominal">Corrente nominal (A)</label><input type="number" id="motorCorrenteNominal" step="0.01" min="0" placeholder="Ex.: 7.2"></div>
+        <div class="field-group field-wide"><label for="motorObservacoes">Observações</label><input type="text" id="motorObservacoes" placeholder="Ex.: bomba da filtragem principal"></div>
       </div>
 
       <button type="button" id="btnSalvarMotor" class="btn-primary">Salvar dados do motor</button>
@@ -133,7 +114,6 @@
           <option value="5">Sexta</option>
           <option value="6">Sábado</option>
         </select>
-
         <input type="time" id="hora" required>
         <input type="number" id="duracao" placeholder="Duração (min)" required>
         <button type="submit">Adicionar horário</button>
@@ -141,14 +121,7 @@
 
       <div class="table-wrap">
         <table id="lista-agenda">
-          <thead>
-            <tr>
-              <th>Dia</th>
-              <th>Início</th>
-              <th>Duração</th>
-              <th>Ação</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Dia</th><th>Início</th><th>Duração</th><th>Ação</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -156,6 +129,6 @@
   </section>
 </main>
 
-<script src="js/agenda.js?v=20260814-4"></script>
+<script src="js/agenda.js?v=20260814-5"></script>
 </body>
 </html>
