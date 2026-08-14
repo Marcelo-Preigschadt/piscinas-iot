@@ -5,13 +5,17 @@ if (localStorage.getItem('logado') !== 'true' || !localStorage.getItem('token'))
   window.location.href = 'login.html';
 }
 
+if (localStorage.getItem('primeiro_acesso') === 'true') {
+  window.location.href = 'senha.html';
+}
+
 const perfil = localStorage.getItem('perfil') || 'cliente';
 let piscinasCache = [];
 let clientesCache = [];
 let dispositivosPorPiscina = new Map();
 
 function limparSessao() {
-  ['token','token_expires_at','usuario','nome_usuario','cliente_id','perfil','logado']
+  ['token','token_expires_at','usuario','nome_usuario','cliente_id','perfil','logado','primeiro_acesso','piscina_id']
     .forEach(k => localStorage.removeItem(k));
 }
 
@@ -21,11 +25,19 @@ async function apiFetch(path, options = {}) {
   if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+
   if (res.status === 401) {
     limparSessao();
     window.location.href = 'login.html';
     throw new Error('Sessão expirada');
   }
+
+  if (res.status === 428) {
+    localStorage.setItem('primeiro_acesso', 'true');
+    window.location.href = 'senha.html';
+    throw new Error('Troca de senha obrigatória');
+  }
+
   return res;
 }
 
@@ -80,27 +92,108 @@ function configurarModais() {
 
 async function carregarClientes() {
   if (perfil !== 'admin') return;
-  const res = await apiFetch('/clientes');
-  const dados = await res.json().catch(() => ([]));
-  if (!res.ok) throw new Error(dados.erro || 'Erro ao carregar clientes');
-  clientesCache = Array.isArray(dados) ? dados : [];
-  preencherSelectClientes();
+
+  const grid = document.getElementById('clientesGrid');
+  if (grid) grid.innerHTML = '<div class="loading-card">Carregando clientes...</div>';
+
+  try {
+    const res = await apiFetch('/clientes');
+    const dados = await res.json().catch(() => ([]));
+    if (!res.ok) throw new Error(dados.erro || 'Erro ao carregar clientes');
+
+    clientesCache = Array.isArray(dados) ? dados : [];
+    renderizarClientes();
+    preencherSelectClientes();
+  } catch (err) {
+    console.error(err);
+    if (grid) grid.innerHTML = `<div class="error-card">${escapeHtml(err.message || 'Erro ao carregar clientes')}</div>`;
+  }
+}
+
+function renderizarClientes() {
+  const grid = document.getElementById('clientesGrid');
+  const empty = document.getElementById('emptyClientes');
+  if (!grid || !empty) return;
+
+  grid.innerHTML = '';
+
+  if (!clientesCache.length) {
+    empty.classList.remove('hidden');
+    return;
+  }
+
+  empty.classList.add('hidden');
+
+  clientesCache.forEach(c => {
+    const usuario = Array.isArray(c.usuarios) && c.usuarios.length ? c.usuarios[0] : null;
+    const piscinaUsuario = usuario?.piscina_id
+      ? (c.piscinas || []).find(p => Number(p.id) === Number(usuario.piscina_id))
+      : null;
+    const piscina = piscinaUsuario || ((c.piscinas || []).length ? c.piscinas[0] : null);
+    const acessoStatus = usuario
+      ? (usuario.primeiro_acesso ? 'Senha provisória' : 'Acesso ativo')
+      : 'Sem usuário';
+    const acessoClasse = usuario?.primeiro_acesso ? 'warning' : (usuario ? 'success' : 'neutral');
+
+    const card = document.createElement('article');
+    card.className = 'client-card';
+    card.innerHTML = `
+      <div class="client-card-top">
+        <div>
+          <span class="eyebrow">CLIENTE</span>
+          <h3>${escapeHtml(c.nome)}</h3>
+          <p>${escapeHtml(c.email || 'E-mail não informado')}${c.telefone ? ' • ' + escapeHtml(c.telefone) : ''}</p>
+        </div>
+        <span class="status-chip ${acessoClasse}">${acessoStatus}</span>
+      </div>
+
+      <div class="client-info-grid">
+        <div>
+          <span>Usuário de acesso</span>
+          <strong>${usuario ? escapeHtml(usuario.usuario) : 'Não cadastrado'}</strong>
+        </div>
+        <div>
+          <span>Piscina vinculada</span>
+          <strong>${piscina ? escapeHtml(piscina.nome) : 'Nenhuma piscina'}</strong>
+        </div>
+      </div>
+
+      <button class="btn-secondary btn-link-client" type="button" data-link-client="${Number(c.id)}">
+        ${piscina ? 'Alterar piscina vinculada' : 'Vincular piscina'}
+      </button>
+    `;
+    grid.appendChild(card);
+  });
+
+  grid.querySelectorAll('[data-link-client]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const clienteId = String(btn.dataset.linkClient);
+      const select = document.getElementById('clienteVinculo');
+      if (select) select.value = clienteId;
+      const cliente = clientesCache.find(c => Number(c.id) === Number(clienteId));
+      const usuario = cliente?.usuarios?.[0];
+      if (usuario?.piscina_id) {
+        const piscinaSelect = document.getElementById('piscinaVinculo');
+        if (piscinaSelect) piscinaSelect.value = String(usuario.piscina_id);
+      }
+      abrirModal('modalVinculo');
+    });
+  });
 }
 
 function preencherSelectClientes() {
-  ['clientePiscina', 'usuarioCliente'].forEach(id => {
-    const select = document.getElementById(id);
-    if (!select) return;
-    const atual = select.value;
-    select.innerHTML = '<option value="">Selecione o cliente</option>';
-    clientesCache.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c.id;
-      opt.textContent = c.nome;
-      select.appendChild(opt);
-    });
-    if ([...select.options].some(o => o.value === atual)) select.value = atual;
+  const select = document.getElementById('clienteVinculo');
+  if (!select) return;
+
+  const atual = select.value;
+  select.innerHTML = '<option value="">Selecione o cliente</option>';
+  clientesCache.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.nome;
+    select.appendChild(opt);
   });
+  if ([...select.options].some(o => o.value === atual)) select.value = atual;
 }
 
 async function carregarDispositivos() {
@@ -109,6 +202,7 @@ async function carregarDispositivos() {
     const res = await apiFetch('/devices');
     const dados = await res.json().catch(() => ([]));
     if (!res.ok || !Array.isArray(dados)) return;
+
     dados.forEach(d => {
       if (d.piscina?.id) dispositivosPorPiscina.set(Number(d.piscina.id), d);
     });
@@ -136,7 +230,6 @@ async function carregarPiscinas() {
     piscinasCache = Array.isArray(dados) ? dados : [];
     renderizarPiscinas();
     preencherSelectPiscinas();
-    preencherPiscinasDoUsuario();
   } catch (err) {
     console.error(err);
     grid.innerHTML = `<div class="error-card">${escapeHtml(err.message || 'Erro ao carregar piscinas')}</div>`;
@@ -152,7 +245,7 @@ function renderizarPiscinas() {
   if (!piscinasCache.length) {
     empty.classList.remove('hidden');
     document.getElementById('emptyPiscinasTexto').textContent = perfil === 'admin'
-      ? 'Cadastre um cliente e depois adicione a piscina.'
+      ? 'Cadastre uma piscina para começar.'
       : 'Nenhuma piscina foi vinculada ao seu usuário. Entre em contato com o administrador.';
     return;
   }
@@ -165,24 +258,25 @@ function renderizarPiscinas() {
     const statusClasse = !device ? 'neutral' : (online ? 'online' : 'offline');
     const statusTexto = !device ? 'Sem controlador' : (online ? 'Online' : 'Offline');
     const motorTexto = device ? (device.estado_motor === 'ligado' ? 'Motor ligado' : 'Motor desligado') : 'ESP32 não vinculado';
-    const cliente = perfil === 'admin' && p.clientes?.nome
-      ? `<span class="pool-client">${escapeHtml(p.clientes.nome)}</span>` : '';
+    const clienteTexto = p.clientes?.nome || 'Sem cliente vinculado';
 
     const card = document.createElement('article');
     card.className = 'pool-card';
     card.innerHTML = `
       <div class="pool-card-top">
         <div>
-          ${cliente}
+          ${perfil === 'admin' ? `<span class="pool-client">${escapeHtml(clienteTexto)}</span>` : ''}
           <h3>${escapeHtml(p.nome)}</h3>
           <p>${escapeHtml(p.localizacao || 'Localização não informada')}</p>
         </div>
         <span class="status-chip ${statusClasse}">${statusTexto}</span>
       </div>
+
       <div class="pool-meta">
         <span><strong>Controlador</strong>${device ? escapeHtml(device.device_id) : 'Não vinculado'}</span>
         <span><strong>Motor</strong>${escapeHtml(motorTexto)}</span>
       </div>
+
       <div class="pool-actions">
         <button class="btn-primary btn-open-pool" type="button" data-open-pool="${Number(p.id)}">Abrir piscina</button>
         ${perfil === 'admin' ? `<button class="btn-danger-light" type="button" data-remove-pool="${Number(p.id)}">Remover</button>` : ''}
@@ -201,38 +295,23 @@ function renderizarPiscinas() {
 }
 
 function preencherSelectPiscinas() {
-  const select = document.getElementById('piscinaPareamento');
-  if (!select) return;
-  const atual = select.value;
-  select.innerHTML = '<option value="">Selecione a piscina</option>';
-  piscinasCache.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p.id;
-    opt.textContent = `${p.nome}${p.clientes?.nome ? ' — ' + p.clientes.nome : ''}`;
-    select.appendChild(opt);
-  });
-  if ([...select.options].some(o => o.value === atual)) select.value = atual;
-}
+  ['piscinaPareamento', 'piscinaVinculo'].forEach(id => {
+    const select = document.getElementById(id);
+    if (!select) return;
 
-function preencherPiscinasDoUsuario() {
-  const selectCliente = document.getElementById('usuarioCliente');
-  const selectPiscina = document.getElementById('usuarioPiscina');
-  if (!selectCliente || !selectPiscina) return;
+    const atual = select.value;
+    select.innerHTML = '<option value="">Selecione a piscina</option>';
 
-  const clienteId = Number(selectCliente.value || 0);
-  selectPiscina.innerHTML = clienteId
-    ? '<option value="">Selecione a piscina</option>'
-    : '<option value="">Selecione primeiro o cliente</option>';
-
-  if (!clienteId) return;
-  piscinasCache
-    .filter(p => Number(p.cliente_id) === clienteId)
-    .forEach(p => {
+    piscinasCache.forEach(p => {
       const opt = document.createElement('option');
       opt.value = p.id;
-      opt.textContent = p.nome;
-      selectPiscina.appendChild(opt);
+      const dono = p.clientes?.nome ? ` — ${p.clientes.nome}` : ' — sem cliente';
+      opt.textContent = `${p.nome}${perfil === 'admin' ? dono : ''}`;
+      select.appendChild(opt);
     });
+
+    if ([...select.options].some(o => o.value === atual)) select.value = atual;
+  });
 }
 
 function abrirPiscina(id) {
@@ -243,20 +322,34 @@ async function criarCliente() {
   const payload = {
     nome: document.getElementById('clienteNome').value.trim(),
     telefone: document.getElementById('clienteTelefone').value.trim(),
-    email: document.getElementById('clienteEmail').value.trim()
+    email: document.getElementById('clienteEmail').value.trim(),
+    usuario: document.getElementById('clienteUsuario').value.trim(),
+    senha_provisoria: document.getElementById('clienteSenhaProvisoria').value
   };
-  if (!payload.nome) return setStatus('statusCliente', 'Informe o nome do cliente.', true);
+
+  if (!payload.nome || !payload.usuario || !payload.senha_provisoria) {
+    return setStatus('statusCliente', 'Informe nome, usuário e senha provisória.', true);
+  }
+  if (payload.senha_provisoria.length < 6) {
+    return setStatus('statusCliente', 'A senha provisória deve ter pelo menos 6 caracteres.', true);
+  }
 
   setStatus('statusCliente', 'Cadastrando...');
+
   try {
-    const res = await apiFetch('/clientes', { method: 'POST', body: JSON.stringify(payload) });
+    const res = await apiFetch('/clientes', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.erro || 'Erro ao cadastrar cliente');
 
-    ['clienteNome','clienteTelefone','clienteEmail'].forEach(id => document.getElementById(id).value = '');
+    ['clienteNome','clienteTelefone','clienteEmail','clienteUsuario','clienteSenhaProvisoria']
+      .forEach(id => document.getElementById(id).value = '');
+
     await carregarClientes();
-    setStatus('statusCliente', 'Cliente cadastrado com sucesso.');
-    setTimeout(() => fecharModal(document.getElementById('modalCliente')), 700);
+    setStatus('statusCliente', 'Cliente cadastrado com acesso provisório.');
+    setTimeout(() => fecharModal(document.getElementById('modalCliente')), 900);
   } catch (err) {
     setStatus('statusCliente', err.message || 'Erro ao cadastrar cliente', true);
   }
@@ -264,65 +357,68 @@ async function criarCliente() {
 
 async function criarPiscina() {
   const payload = {
-    cliente_id: Number(document.getElementById('clientePiscina').value || 0),
     nome: document.getElementById('nomePiscinaCadastro').value.trim(),
     localizacao: document.getElementById('localizacaoPiscinaCadastro').value.trim()
   };
-  if (!payload.cliente_id) return setStatus('statusPiscina', 'Selecione o cliente.', true);
+
   if (!payload.nome) return setStatus('statusPiscina', 'Informe o nome da piscina.', true);
 
   setStatus('statusPiscina', 'Cadastrando...');
+
   try {
-    const res = await apiFetch('/piscinas', { method: 'POST', body: JSON.stringify(payload) });
+    const res = await apiFetch('/piscinas', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.erro || 'Erro ao cadastrar piscina');
 
     document.getElementById('nomePiscinaCadastro').value = '';
     document.getElementById('localizacaoPiscinaCadastro').value = '';
+
     await carregarPiscinas();
-    setStatus('statusPiscina', 'Piscina cadastrada com sucesso.');
-    setTimeout(() => fecharModal(document.getElementById('modalPiscina')), 700);
+    setStatus('statusPiscina', 'Piscina cadastrada. Agora faça o vínculo com o cliente.');
+    setTimeout(() => fecharModal(document.getElementById('modalPiscina')), 1000);
   } catch (err) {
     setStatus('statusPiscina', err.message || 'Erro ao cadastrar piscina', true);
   }
 }
 
-async function criarUsuario() {
-  const payload = {
-    cliente_id: Number(document.getElementById('usuarioCliente').value || 0),
-    piscina_id: Number(document.getElementById('usuarioPiscina').value || 0),
-    nome: document.getElementById('usuarioNome').value.trim(),
-    usuario: document.getElementById('usuarioLogin').value.trim(),
-    senha: document.getElementById('usuarioSenha').value
-  };
+async function vincularClientePiscina() {
+  const clienteId = Number(document.getElementById('clienteVinculo').value || 0);
+  const piscinaId = Number(document.getElementById('piscinaVinculo').value || 0);
 
-  if (!payload.cliente_id || !payload.piscina_id || !payload.nome || !payload.usuario || !payload.senha) {
-    return setStatus('statusUsuario', 'Preencha cliente, piscina, nome, usuário e senha.', true);
+  if (!clienteId || !piscinaId) {
+    return setStatus('statusVinculo', 'Selecione o cliente e a piscina.', true);
   }
 
-  setStatus('statusUsuario', 'Criando acesso...');
-  try {
-    const res = await apiFetch('/usuarios', { method: 'POST', body: JSON.stringify(payload) });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.erro || 'Erro ao cadastrar usuário');
+  setStatus('statusVinculo', 'Salvando vínculo...');
 
-    ['usuarioNome','usuarioLogin','usuarioSenha'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('usuarioCliente').value = '';
-    preencherPiscinasDoUsuario();
-    setStatus('statusUsuario', 'Usuário criado e vinculado à piscina.');
-    setTimeout(() => fecharModal(document.getElementById('modalUsuario')), 800);
+  try {
+    const res = await apiFetch('/vinculos/cliente-piscina', {
+      method: 'POST',
+      body: JSON.stringify({ cliente_id: clienteId, piscina_id: piscinaId })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.erro || 'Erro ao salvar vínculo');
+
+    await Promise.all([carregarClientes(), carregarPiscinas()]);
+    setStatus('statusVinculo', `${data.cliente_nome} vinculado à piscina ${data.piscina_nome}.`);
+    setTimeout(() => fecharModal(document.getElementById('modalVinculo')), 1100);
   } catch (err) {
-    setStatus('statusUsuario', err.message || 'Erro ao cadastrar usuário', true);
+    setStatus('statusVinculo', err.message || 'Erro ao salvar vínculo', true);
   }
 }
 
 async function parearDispositivo() {
   const piscinaId = Number(document.getElementById('piscinaPareamento').value || 0);
   const codigo = document.getElementById('codigoPareamento').value.trim();
+
   if (!piscinaId) return setStatus('statusPareamento', 'Selecione a piscina.', true);
   if (!/^\d{6}$/.test(codigo)) return setStatus('statusPareamento', 'Informe o código de 6 dígitos.', true);
 
   setStatus('statusPareamento', 'Vinculando...');
+
   try {
     const res = await apiFetch('/devices/pair', {
       method: 'POST',
@@ -348,7 +444,7 @@ async function removerPiscina(id) {
     const res = await apiFetch(`/piscinas/${id}`, { method: 'DELETE' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.erro || 'Erro ao remover piscina');
-    await carregarPiscinas();
+    await Promise.all([carregarPiscinas(), perfil === 'admin' ? carregarClientes() : Promise.resolve()]);
   } catch (err) {
     alert(err.message || 'Erro ao remover piscina');
   }
@@ -367,34 +463,53 @@ function configurarPerfil() {
 
   if (perfil === 'admin') {
     document.getElementById('adminActions').classList.remove('hidden');
+    document.getElementById('adminClientes').classList.remove('hidden');
     document.getElementById('painelTipo').textContent = 'ADMINISTRAÇÃO';
     document.getElementById('painelTitulo').textContent = 'Painel de controle';
-    document.getElementById('painelDescricao').textContent = 'Gerencie clientes, usuários, piscinas e controladores em um único lugar.';
+    document.getElementById('painelDescricao').textContent = 'Gerencie clientes, piscinas, vínculos e controladores em um único lugar.';
     document.getElementById('piscinasTitulo').textContent = 'Piscinas cadastradas';
+    document.getElementById('piscinasDescricao').textContent = 'Visualize todas as piscinas, inclusive as que ainda não possuem cliente ou ESP32.';
   } else {
-    document.getElementById('painelTipo').textContent = 'MINHA CONTA';
-    document.getElementById('painelTitulo').textContent = 'Minha piscina';
-    document.getElementById('painelDescricao').textContent = 'Acesse sua piscina para controlar o motor e acompanhar agenda, consumo e qualidade da água.';
-    document.getElementById('piscinasTitulo').textContent = 'Piscina vinculada ao seu acesso';
+    document.getElementById('painelTipo').textContent = 'MINHA PISCINA';
+    document.getElementById('painelTitulo').textContent = `Olá, ${nome}`;
+    document.getElementById('painelDescricao').textContent = 'Acesse sua piscina para controlar o motor e acompanhar as informações do sistema.';
+    document.getElementById('piscinasTitulo').textContent = 'Sua piscina';
+    document.getElementById('piscinasDescricao').textContent = 'Somente a piscina vinculada ao seu acesso aparece aqui.';
+  }
+}
+
+async function atualizarTudo() {
+  const btn = document.getElementById('btnAtualizar');
+  btn.disabled = true;
+  btn.textContent = 'Atualizando...';
+
+  try {
+    if (perfil === 'admin') {
+      await Promise.all([carregarClientes(), carregarPiscinas()]);
+    } else {
+      await carregarPiscinas();
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Atualizar';
   }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
   configurarPerfil();
   configurarModais();
+
   document.getElementById('btnSair').addEventListener('click', logout);
-  document.getElementById('btnAtualizar').addEventListener('click', carregarPiscinas);
+  document.getElementById('btnAtualizar').addEventListener('click', atualizarTudo);
 
   if (perfil === 'admin') {
     document.getElementById('btnCriarCliente').addEventListener('click', criarCliente);
     document.getElementById('btnCriarPiscina').addEventListener('click', criarPiscina);
-    document.getElementById('btnCriarUsuario').addEventListener('click', criarUsuario);
+    document.getElementById('btnVincularClientePiscina').addEventListener('click', vincularClientePiscina);
     document.getElementById('btnParear').addEventListener('click', parearDispositivo);
-    document.getElementById('usuarioCliente').addEventListener('change', preencherPiscinasDoUsuario);
 
-    try { await carregarClientes(); }
-    catch (err) { console.error(err); }
+    await Promise.all([carregarClientes(), carregarPiscinas()]);
+  } else {
+    await carregarPiscinas();
   }
-
-  await carregarPiscinas();
 });
