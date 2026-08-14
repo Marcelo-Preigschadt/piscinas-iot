@@ -2,11 +2,11 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Controle de Piscinas</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-
   <header>
     <h1>Controle de Piscinas</h1>
     <div class="header-right">
@@ -17,18 +17,41 @@
   </header>
 
   <main>
-    <!-- Cadastro de piscina -->
     <section class="card">
       <h2>Nova Piscina</h2>
+      <div id="adminClienteContainer" class="hidden">
+        <label for="clientePiscina">Cliente</label>
+        <select id="clientePiscina"></select>
+      </div>
       <input type="text" id="nome" placeholder="Nome da piscina">
       <input type="text" id="localizacao" placeholder="Localização">
       <button id="btnCriar">Adicionar</button>
     </section>
 
-    <!-- Lista de piscinas -->
     <section class="card">
       <h2>Piscinas Cadastradas</h2>
       <ul id="listaPiscinas"></ul>
+    </section>
+
+    <section class="card">
+      <h2>Vincular Controlador ESP32</h2>
+      <p class="helper">Selecione a piscina e informe o código de 6 dígitos exibido pelo controlador durante a instalação.</p>
+      <select id="piscinaPareamento"></select>
+      <input type="text" id="codigoPareamento" inputmode="numeric" maxlength="6" placeholder="Código de pareamento">
+      <button id="btnParear">Vincular controlador</button>
+      <span id="statusPareamento" class="status-line"></span>
+    </section>
+
+    <section id="adminClientes" class="card hidden">
+      <h2>Clientes</h2>
+      <input type="text" id="clienteNome" placeholder="Nome do cliente">
+      <input type="text" id="clienteTelefone" placeholder="Telefone">
+      <input type="email" id="clienteEmail" placeholder="E-mail">
+      <input type="text" id="clienteUsuarioNome" placeholder="Nome do usuário responsável">
+      <input type="text" id="clienteUsuario" placeholder="Usuário de acesso">
+      <input type="password" id="clienteSenha" placeholder="Senha inicial">
+      <button id="btnCriarCliente">Cadastrar cliente</button>
+      <ul id="listaClientes"></ul>
     </section>
   </main>
 
