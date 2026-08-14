@@ -2,11 +2,12 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>Agenda das Piscinas</title>
-  <link rel="stylesheet" href="css/agenda.css?v=20260814-3">
+  <link rel="stylesheet" href="css/agenda.css?v=20260814-4">
 </head>
 <body>
 
@@ -19,59 +20,142 @@
 </header>
 
 <main>
-
-  <!-- SELEÇÃO DE PISCINAS -->
   <section id="listaPiscinasAgenda">
     <h2>Selecione uma piscina</h2>
     <div id="piscinasCards" class="cards-container"></div>
   </section>
 
-  <!-- AGENDA DA PISCINA -->
- <section id="agendaPiscina" class="hidden card">
-  <h2 id="nomePiscina">Piscina Selecionada</h2>
+  <section id="agendaPiscina" class="hidden card">
+    <div class="titulo-piscina">
+      <div>
+        <h2 id="nomePiscina">Piscina Selecionada</h2>
+        <div id="deviceStatusLine" class="device-status">Controlador: verificando...</div>
+      </div>
+    </div>
 
-  <!-- Status do Motor no canto superior direito -->
- <div id="motorStatusContainer">
-  <div class="motor-title">Status do Motor</div>
-  <span id="statusMotor">DESLIGADO</span>
-  <div class="motor-buttons">
-    <button class="ligar" onclick="ligarMotor()">Ligar</button>
-    <button class="desligar" onclick="desligarMotor()">Desligar</button>
-  </div>
-</div>
+    <div class="dashboard-grid">
+      <section class="painel-card motor-control-card">
+        <h3>Controle do Motor</h3>
+        <div class="status-label">Status</div>
+        <span id="statusMotor" class="status-motor">DESLIGADO</span>
+        <div class="motor-buttons">
+          <button class="ligar" onclick="ligarMotor()">Ligar Motor</button>
+          <button class="desligar" onclick="desligarMotor()">Desligar Motor</button>
+        </div>
+      </section>
 
-  <form id="formAgenda">
-    <select id="dia">
-      <option value="0">Domingo</option>
-      <option value="1">Segunda</option>
-      <option value="2">Terça</option>
-      <option value="3">Quarta</option>
-      <option value="4">Quinta</option>
-      <option value="5">Sexta</option>
-      <option value="6">Sábado</option>
-    </select>
+      <section class="painel-card">
+        <h3>Consumo do Motor</h3>
+        <div class="medidas-grid">
+          <div class="medida">
+            <span class="medida-label">Corrente</span>
+            <strong id="leituraCorrente">Aguardando leitura</strong>
+          </div>
+          <div class="medida">
+            <span class="medida-label">Potência</span>
+            <strong id="leituraPotencia">Aguardando leitura</strong>
+          </div>
+          <div class="medida">
+            <span class="medida-label">Energia</span>
+            <strong id="leituraEnergia">Aguardando leitura</strong>
+          </div>
+        </div>
+      </section>
 
-    <input type="time" id="hora" required>
-    <input type="number" id="duracao" placeholder="Duração (min)" required>
+      <section class="painel-card">
+        <h3>Qualidade da Água</h3>
+        <div class="medidas-grid">
+          <div class="medida">
+            <span class="medida-label">pH</span>
+            <strong id="leituraPh">Aguardando sensor</strong>
+          </div>
+          <div class="medida">
+            <span class="medida-label">Temperatura</span>
+            <strong id="leituraTemperatura">Aguardando sensor</strong>
+          </div>
+          <div class="medida">
+            <span class="medida-label">ORP</span>
+            <strong id="leituraOrp">Aguardando sensor</strong>
+          </div>
+        </div>
+        <div id="ultimaLeitura" class="ultima-leitura">Nenhuma leitura recebida</div>
+      </section>
+    </div>
 
-    <button type="submit">Adicionar horário</button>
-  </form>
+    <section class="subcard dados-motor-card">
+      <div class="section-title-row">
+        <div>
+          <h3>Dados do Motor</h3>
+          <p>Cadastre as informações da bomba/motor desta piscina.</p>
+        </div>
+        <span id="statusSalvarMotor" class="save-status"></span>
+      </div>
 
-  <table id="lista-agenda">
-    <thead>
-      <tr>
-        <th>Dia</th>
-        <th>Início</th>
-        <th>Duração</th>
-        <th>Ação</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</section>
+      <div class="motor-form-grid">
+        <div class="field-group">
+          <label for="motorFabricante">Fabricante</label>
+          <input type="text" id="motorFabricante" placeholder="Ex.: WEG">
+        </div>
+        <div class="field-group">
+          <label for="motorModelo">Modelo</label>
+          <input type="text" id="motorModelo" placeholder="Modelo do motor/bomba">
+        </div>
+        <div class="field-group">
+          <label for="motorPotenciaCv">Potência nominal (CV)</label>
+          <input type="number" id="motorPotenciaCv" step="0.01" min="0" placeholder="Ex.: 1.5">
+        </div>
+        <div class="field-group">
+          <label for="motorTensaoV">Tensão (V)</label>
+          <input type="number" id="motorTensaoV" step="1" min="0" placeholder="Ex.: 220">
+        </div>
+        <div class="field-group">
+          <label for="motorCorrenteNominal">Corrente nominal (A)</label>
+          <input type="number" id="motorCorrenteNominal" step="0.01" min="0" placeholder="Ex.: 7.2">
+        </div>
+        <div class="field-group field-wide">
+          <label for="motorObservacoes">Observações</label>
+          <input type="text" id="motorObservacoes" placeholder="Ex.: bomba da filtragem principal">
+        </div>
+      </div>
 
+      <button type="button" id="btnSalvarMotor" class="btn-primary">Salvar dados do motor</button>
+    </section>
+
+    <section class="subcard agenda-card">
+      <h3>Programação da Piscina</h3>
+      <form id="formAgenda">
+        <select id="dia">
+          <option value="0">Domingo</option>
+          <option value="1">Segunda</option>
+          <option value="2">Terça</option>
+          <option value="3">Quarta</option>
+          <option value="4">Quinta</option>
+          <option value="5">Sexta</option>
+          <option value="6">Sábado</option>
+        </select>
+
+        <input type="time" id="hora" required>
+        <input type="number" id="duracao" placeholder="Duração (min)" required>
+        <button type="submit">Adicionar horário</button>
+      </form>
+
+      <div class="table-wrap">
+        <table id="lista-agenda">
+          <thead>
+            <tr>
+              <th>Dia</th>
+              <th>Início</th>
+              <th>Duração</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </section>
 </main>
 
-<script src="js/agenda.js?v=20260814-3"></script>
+<script src="js/agenda.js?v=20260814-4"></script>
 </body>
 </html>
