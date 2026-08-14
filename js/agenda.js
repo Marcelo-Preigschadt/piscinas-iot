@@ -1,150 +1,196 @@
-if (localStorage.getItem('logado') !== 'true') {
+const API = 'https://wqjzrbhbkienlxocykcn.supabase.co/functions/v1/piscinas-api';
+
+if (localStorage.getItem('logado') !== 'true' || !localStorage.getItem('token')) {
+  sair();
+}
+
+let piscinaSelecionada = null;
+let timerStatus = null;
+
+async function apiFetch(path, options = {}) {
+  const headers = new Headers(options.headers || {});
+  headers.set('Authorization', `Bearer ${localStorage.getItem('token') || ''}`);
+  if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+
+  const res = await fetch(`${API}${path}`, { ...options, headers });
+  if (res.status === 401) {
+    sair();
+    throw new Error('Sessão expirada');
+  }
+  return res;
+}
+
+function sair() {
+  ['token','token_expires_at','usuario','nome_usuario','cliente_id','perfil','logado'].forEach(k => localStorage.removeItem(k));
   window.location.href = 'login.html';
 }
-const API = 'https://wqjzrbhbkienlxocykcn.supabase.co/functions/v1/piscinas-api';
-let piscinaSelecionada = null;
 
-/* CARREGA PISCINAS */
 async function carregarPiscinas() {
-  const res = await fetch(`${API}/piscinas`);
-  const piscinas = await res.json();
+  try {
+    const res = await apiFetch('/piscinas');
+    const piscinas = await res.json();
+    if (!res.ok) throw new Error(piscinas.erro || 'Erro ao carregar piscinas');
 
-  const container = document.getElementById('piscinasCards');
-  container.innerHTML = '';
+    const container = document.getElementById('piscinasCards');
+    container.innerHTML = '';
 
-  piscinas.forEach(p => {
-    const card = document.createElement('div');
-    card.className = 'card-piscina';
-    card.innerHTML = `<strong>${p.nome}</strong><br>${p.localizacao}`;
-    card.onclick = () => abrirAgenda(p);
-    container.appendChild(card);
-  });
+    piscinas.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'card-piscina';
+      const cliente = p.clientes?.nome ? `<br><small>${p.clientes.nome}</small>` : '';
+      card.innerHTML = `<strong>${p.nome}</strong><br>${p.localizacao || 'Sem localização'}${cliente}`;
+      card.onclick = () => abrirAgenda(p);
+      container.appendChild(card);
+    });
+  } catch (err) {
+    console.error(err);
+    alert(err.message || 'Erro ao carregar piscinas');
+  }
 }
 
-/* ABRIR AGENDA DA PISCINA */
 function abrirAgenda(piscina) {
   piscinaSelecionada = piscina;
-
   document.getElementById('listaPiscinasAgenda').classList.add('hidden');
   document.getElementById('agendaPiscina').classList.remove('hidden');
-
   document.getElementById('nomePiscina').innerText = piscina.nome;
 
   carregarAgenda();
+  carregarStatusMotor();
+  if (timerStatus) clearInterval(timerStatus);
+  timerStatus = setInterval(carregarStatusMotor, 5000);
 }
 
-/* VOLTAR */
 function voltar() {
-  document.getElementById('agendaPiscina').classList.add('hidden');
-  document.getElementById('listaPiscinasAgenda').classList.remove('hidden');
-}
-
-/* CARREGAR AGENDA */
-async function carregarAgenda() {
-  const res = await fetch(`${API}/agenda/${piscinaSelecionada.id}`);
-  const dados = await res.json();
-
-  const tbody = document.querySelector('#lista-agenda tbody');
-  tbody.innerHTML = '';
-
-  dados.forEach(a => {
-    tbody.innerHTML += `
-      <tr>
-        <td>${diaTexto(a.dia_semana)}</td>
-        <td>${a.hora_inicio}</td>
-        <td>${a.duracao_min} min</td>
-        <td>
-          <button onclick="remover(${a.id})">Excluir</button>
-        </td>
-      </tr>
-    `;
-  });
-}
-
-/* ADICIONAR HORÁRIO */
-document.getElementById('formAgenda').addEventListener('submit', async e => {
-  e.preventDefault();
-
-  await fetch(`${API}/agenda`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      piscina_id: piscinaSelecionada.id,
-      dia_semana: dia.value,
-      hora_inicio: hora.value,
-      duracao_min: duracao.value
-    })
-  });
-
-  carregarAgenda();
-});
-
-/* REMOVER */
-async function remover(id) {
-  await fetch(`${API}/agenda/${id}`, { method: 'DELETE' });
-  carregarAgenda();
-}
-
-function diaTexto(d) {
-  return ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][d];
-}
-/* FUNÇÃO PARA SAIR */
-function sair() {
-  localStorage.removeItem('logado');
-  localStorage.removeItem('usuario');
-  window.location.href = 'login.html';
-}
-
-/* FUNÇÃO VOLTAR */
-function voltar() {
-  // Se estiver na tela de seleção de piscina, volta para index
   if (!document.getElementById('agendaPiscina').classList.contains('hidden')) {
-    // Se a agenda está visível, volta para lista de piscinas
     document.getElementById('agendaPiscina').classList.add('hidden');
     document.getElementById('listaPiscinasAgenda').classList.remove('hidden');
+    piscinaSelecionada = null;
+    if (timerStatus) clearInterval(timerStatus);
+    timerStatus = null;
   } else {
-    // Se já estiver na lista de piscinas, volta para index
     window.location.href = 'index.html';
   }
 }
-/* FUNÇÃO PARA LIGAR O MOTOR */
-async function ligarMotor() {
-  if (!piscinaSelecionada) return alert('Selecione uma piscina primeiro');
 
+async function carregarAgenda() {
+  if (!piscinaSelecionada) return;
   try {
-    const res = await fetch(`${API}/motor/${piscinaSelecionada.id}/ligar`, { method: 'POST' });
-    if (res.ok) {
-      document.getElementById('statusMotor').innerText = 'LIGADO';
-      document.getElementById('statusMotor').classList.add('ligado');
-      document.getElementById('statusMotor').classList.remove('desligado');
-    } else {
-      alert('Falha ao ligar o motor');
-    }
+    const res = await apiFetch(`/agenda/${piscinaSelecionada.id}`);
+    const dados = await res.json();
+    if (!res.ok) throw new Error(dados.erro || 'Erro ao carregar agenda');
+
+    const tbody = document.querySelector('#lista-agenda tbody');
+    tbody.innerHTML = '';
+
+    dados.forEach(a => {
+      tbody.innerHTML += `
+        <tr>
+          <td>${diaTexto(a.dia_semana)}</td>
+          <td>${String(a.hora_inicio).slice(0,5)}</td>
+          <td>${a.duracao_min} min</td>
+          <td><button onclick="remover(${a.id})">Excluir</button></td>
+        </tr>
+      `;
+    });
   } catch (err) {
     console.error(err);
-    alert('Erro na comunicação com o servidor');
+    alert(err.message || 'Erro ao carregar agenda');
   }
 }
 
-/* FUNÇÃO PARA DESLIGAR O MOTOR */
-async function desligarMotor() {
-  if (!piscinaSelecionada) return alert('Selecione uma piscina primeiro');
+document.getElementById('formAgenda').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!piscinaSelecionada) return;
 
   try {
-    const res = await fetch(`${API}/motor/${piscinaSelecionada.id}/desligar`, { method: 'POST' });
-    if (res.ok) {
-      document.getElementById('statusMotor').innerText = 'DESLIGADO';
-      document.getElementById('statusMotor').classList.add('desligado');
-      document.getElementById('statusMotor').classList.remove('ligado');
-    } else {
-      alert('Falha ao desligar o motor');
-    }
+    const res = await apiFetch('/agenda', {
+      method: 'POST',
+      body: JSON.stringify({
+        piscina_id: piscinaSelecionada.id,
+        dia_semana: Number(document.getElementById('dia').value),
+        hora_inicio: document.getElementById('hora').value,
+        duracao_min: Number(document.getElementById('duracao').value)
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.erro || 'Erro ao adicionar horário');
+    await carregarAgenda();
   } catch (err) {
     console.error(err);
-    alert('Erro na comunicação com o servidor');
+    alert(err.message || 'Erro ao adicionar horário');
+  }
+});
+
+async function remover(id) {
+  try {
+    const res = await apiFetch(`/agenda/${id}`, { method: 'DELETE' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.erro || 'Erro ao excluir horário');
+    await carregarAgenda();
+  } catch (err) {
+    console.error(err);
+    alert(err.message || 'Erro ao excluir horário');
   }
 }
 
+function diaTexto(d) {
+  return ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][Number(d)];
+}
 
+async function carregarStatusMotor() {
+  if (!piscinaSelecionada) return;
+  const el = document.getElementById('statusMotor');
+  try {
+    const res = await apiFetch(`/motor/${piscinaSelecionada.id}/status`);
+    const data = await res.json().catch(() => ({}));
+
+    if (res.status === 404) {
+      el.innerText = 'SEM CONTROLADOR';
+      el.classList.remove('ligado', 'desligado');
+      return;
+    }
+    if (!res.ok) throw new Error(data.erro || 'Falha ao obter status');
+
+    if (data.status === 'offline') {
+      el.innerText = 'OFFLINE';
+      el.classList.remove('ligado');
+      el.classList.add('desligado');
+      return;
+    }
+
+    const ligado = data.motor === 'ligado';
+    el.innerText = ligado ? 'LIGADO' : 'DESLIGADO';
+    el.classList.toggle('ligado', ligado);
+    el.classList.toggle('desligado', !ligado);
+  } catch (err) {
+    console.error(err);
+    el.innerText = 'ERRO';
+  }
+}
+
+async function enviarComando(acao) {
+  if (!piscinaSelecionada) return alert('Selecione uma piscina primeiro');
+  const el = document.getElementById('statusMotor');
+
+  try {
+    const res = await apiFetch(`/motor/${piscinaSelecionada.id}/${acao}`, { method: 'POST' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.erro || `Falha ao ${acao} o motor`);
+
+    el.innerText = data.dispositivo === 'offline' ? 'COMANDO PENDENTE / OFFLINE' : 'AGUARDANDO ESP32...';
+    setTimeout(carregarStatusMotor, 5500);
+  } catch (err) {
+    console.error(err);
+    alert(err.message || 'Erro na comunicação com o servidor');
+  }
+}
+
+function ligarMotor() {
+  return enviarComando('ligar');
+}
+
+function desligarMotor() {
+  return enviarComando('desligar');
+}
 
 carregarPiscinas();
