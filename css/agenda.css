@@ -1,0 +1,197 @@
+/* Reset e fontes */
+* {
+  box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #f2f2f2;
+  color: #333;
+}
+
+/* Header */
+header {
+  background: #0077b6;
+  color: white;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+header h1 {
+  font-size: 24px;
+}
+
+header button {
+  background: #fff;
+  color: #0077b6;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+header button:hover {
+  background: #e0f0ff;
+}
+
+/* Main layout */
+main {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Cards de Piscinas (mantendo seu estilo original) */
+#piscinasCards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.card-piscina {
+  background: #0077b6;
+  color: white;
+  padding: 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  flex: 1 1 150px;
+  text-align: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card-piscina:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+}
+
+/* Card da Agenda */
+#agendaPiscina {
+  position: relative;
+  background: #ffffff;
+  padding: 30px 20px 20px 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+/* Nome da piscina */
+#nomePiscina {
+  font-size: 22px;
+  color: #0077b6;
+  margin-bottom: 20px;
+}
+
+/* Status do Motor (novo card) */
+.motor-title {
+  font-weight: bold;
+  font-size: 20px;
+  margin-bottom: 0px;
+}
+#motorStatusContainer {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: #0077b6;
+  color: white;
+  padding: 15px 20px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+#motorStatusContainer span {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.motor-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.motor-buttons button {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  color: white;
+}
+
+.motor-buttons button.ligar {
+  background: #2ecc71;
+}
+
+.motor-buttons button.desligar {
+  background: #e74c3c;
+}
+
+/* Formulário da agenda */
+#formAgenda {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+#formAgenda select,
+#formAgenda input,
+#formAgenda button {
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #cccccc;
+}
+
+#formAgenda button {
+  background: #0077b6;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+#formAgenda button:hover {
+  background: #005f8a;
+}
+
+/* Tabela de horários */
+#lista-agenda {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#lista-agenda th,
+#lista-agenda td {
+  border: 1px solid #cccccc;
+  padding: 10px;
+  text-align: center;
+}
+
+#lista-agenda th {
+  background: #0077b6;
+  color: white;
+}
+
+#lista-agenda td button {
+  padding: 6px 12px;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#lista-agenda td button:hover {
+  background: #c0392b;
+}
+
+/* Escondido */
+.hidden {
+  display: none;
+}

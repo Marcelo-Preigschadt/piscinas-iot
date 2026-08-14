@@ -1,0 +1,131 @@
+/* Reset e fontes */
+* {
+  box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #f2f2f2;
+}
+
+/* Header */
+header {
+  background: #0077b6;
+  color: white;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 4px solid #005f8a;
+}
+
+header h1 {
+  font-size: 24px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-right span {
+  font-weight: bold;
+}
+
+.header-right button {
+  background: #fff;
+  color: #0077b6;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.header-right button:hover {
+  background: #e0f0ff;
+}
+
+/* Main layout */
+main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 20px;
+}
+
+/* Cards */
+.card {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+/* Card headings */
+.card h2 {
+  color: #0077b6;
+  margin-bottom: 15px;
+}
+
+/* Inputs */
+.card input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  border: 1px solid #cccccc;
+  border-radius: 5px;
+}
+
+/* Buttons */
+.card button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 15px;
+  background: #0077b6;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.card button:hover {
+  background: #005f8a;
+}
+
+/* Lista de piscinas */
+#listaPiscinas {
+  list-style: none;
+  padding: 0;
+  margin-top: 10px;
+}
+
+#listaPiscinas li {
+  background: #e0f7ff;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  font-weight: bold;
+}
+
+#listaPiscinas li button {
+  background: #e74c3c;
+  padding: 6px 12px;
+  border-radius: 5px;
+  border: none;
+  color: white;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+#listaPiscinas li button:hover {
+  background: #c0392b;
+}

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Agenda das Piscinas</title>
+  <link rel="stylesheet" href="css/agenda.css">
+</head>
+<body>
+
+<header>
+  <h1>Agenda das Piscinas</h1>
+  <div class="header-buttons">
+    <button onclick="voltar()">⬅ Voltar</button>
+    <button onclick="sair()">Sair</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- SELEÇÃO DE PISCINAS -->
+  <section id="listaPiscinasAgenda">
+    <h2>Selecione uma piscina</h2>
+    <div id="piscinasCards" class="cards-container"></div>
+  </section>
+
+  <!-- AGENDA DA PISCINA -->
+ <section id="agendaPiscina" class="hidden card">
+  <h2 id="nomePiscina">Piscina Selecionada</h2>
+
+  <!-- Status do Motor no canto superior direito -->
+ <div id="motorStatusContainer">
+  <div class="motor-title">Status do Motor</div>
+  <span id="statusMotor">DESLIGADO</span>
+  <div class="motor-buttons">
+    <button class="ligar" onclick="ligarMotor()">Ligar</button>
+    <button class="desligar" onclick="desligarMotor()">Desligar</button>
+  </div>
+</div>
+
+  <form id="formAgenda">
+    <select id="dia">
+      <option value="0">Domingo</option>
+      <option value="1">Segunda</option>
+      <option value="2">Terça</option>
+      <option value="3">Quarta</option>
+      <option value="4">Quinta</option>
+      <option value="5">Sexta</option>
+      <option value="6">Sábado</option>
+    </select>
+
+    <input type="time" id="hora" required>
+    <input type="number" id="duracao" placeholder="Duração (min)" required>
+
+    <button type="submit">Adicionar horário</button>
+  </form>
+
+  <table id="lista-agenda">
+    <thead>
+      <tr>
+        <th>Dia</th>
+        <th>Início</th>
+        <th>Duração</th>
+        <th>Ação</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</section>
+
+</main>
+
+<script src="js/agenda.js"></script>
+</body>
+</html>
