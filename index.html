@@ -7,57 +7,176 @@
   <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Controle de Piscinas</title>
-  <link rel="stylesheet" href="css/style.css?v=20260814-3">
+  <link rel="stylesheet" href="css/style.css?v=20260814-5">
 </head>
 <body>
-  <header>
-    <h1>Controle de Piscinas</h1>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">💧</span>
+      <div>
+        <h1>Controle de Piscinas</h1>
+        <small>Monitoramento e automação</small>
+      </div>
+    </div>
     <div class="header-right">
-      <span id="userDisplay">Bem-vindo, Usuário</span>
-      <button id="btnAgenda">Agenda</button>
-      <button id="btnSair">Sair</button>
+      <div class="user-box">
+        <span id="userDisplay">Usuário</span>
+        <small id="perfilDisplay"></small>
+      </div>
+      <button id="btnSair" class="btn-header">Sair</button>
     </div>
   </header>
 
-  <main>
-    <section class="card">
-      <h2>Nova Piscina</h2>
-      <div id="adminClienteContainer" class="hidden">
-        <label for="clientePiscina">Cliente</label>
-        <select id="clientePiscina"></select>
+  <main class="dashboard-shell">
+    <section class="welcome-panel">
+      <div>
+        <span class="eyebrow" id="painelTipo">PAINEL</span>
+        <h2 id="painelTitulo">Suas piscinas</h2>
+        <p id="painelDescricao">Acesse sua piscina para visualizar o motor, consumo, agenda e leituras da água.</p>
       </div>
-      <input type="text" id="nome" placeholder="Nome da piscina">
-      <input type="text" id="localizacao" placeholder="Localização">
-      <button id="btnCriar">Adicionar</button>
+      <div class="welcome-status">
+        <span class="status-dot"></span>
+        Sistema online
+      </div>
     </section>
 
-    <section class="card">
-      <h2>Piscinas Cadastradas</h2>
-      <ul id="listaPiscinas"></ul>
+    <section id="adminActions" class="admin-section hidden">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">ADMINISTRAÇÃO</span>
+          <h2>Cadastros e vínculos</h2>
+        </div>
+      </div>
+
+      <div class="action-grid">
+        <button class="action-card" data-modal="modalCliente">
+          <span class="action-icon">👤</span>
+          <span><strong>Novo cliente</strong><small>Cadastrar proprietário</small></span>
+        </button>
+        <button class="action-card" data-modal="modalPiscina">
+          <span class="action-icon">🏊</span>
+          <span><strong>Nova piscina</strong><small>Vincular ao cliente</small></span>
+        </button>
+        <button class="action-card" data-modal="modalUsuario">
+          <span class="action-icon">🔐</span>
+          <span><strong>Novo usuário</strong><small>Dar acesso a uma piscina</small></span>
+        </button>
+        <button class="action-card" data-modal="modalParear">
+          <span class="action-icon">📡</span>
+          <span><strong>Vincular ESP32</strong><small>Parear controlador</small></span>
+        </button>
+      </div>
     </section>
 
-    <section class="card">
-      <h2>Vincular Controlador ESP32</h2>
-      <p class="helper">Selecione a piscina e informe o código de 6 dígitos exibido pelo controlador durante a instalação.</p>
-      <select id="piscinaPareamento"></select>
-      <input type="text" id="codigoPareamento" inputmode="numeric" maxlength="6" placeholder="Código de pareamento">
-      <button id="btnParear">Vincular controlador</button>
-      <span id="statusPareamento" class="status-line"></span>
-    </section>
-
-    <section id="adminClientes" class="card hidden">
-      <h2>Clientes</h2>
-      <input type="text" id="clienteNome" placeholder="Nome do cliente">
-      <input type="text" id="clienteTelefone" placeholder="Telefone">
-      <input type="email" id="clienteEmail" placeholder="E-mail">
-      <input type="text" id="clienteUsuarioNome" placeholder="Nome do usuário responsável">
-      <input type="text" id="clienteUsuario" placeholder="Usuário de acesso">
-      <input type="password" id="clienteSenha" placeholder="Senha inicial">
-      <button id="btnCriarCliente">Cadastrar cliente</button>
-      <ul id="listaClientes"></ul>
+    <section class="pool-section">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow" id="piscinasEyebrow">PISCINAS</span>
+          <h2 id="piscinasTitulo">Piscinas cadastradas</h2>
+        </div>
+        <button id="btnAtualizar" class="btn-secondary" type="button">Atualizar</button>
+      </div>
+      <div id="piscinasGrid" class="pool-grid"></div>
+      <div id="emptyPiscinas" class="empty-state hidden">
+        <div class="empty-icon">💧</div>
+        <h3>Nenhuma piscina disponível</h3>
+        <p id="emptyPiscinasTexto">Ainda não há piscina vinculada a este acesso.</p>
+      </div>
     </section>
   </main>
 
-  <script src="js/app.js?v=20260814-3"></script>
+  <!-- MODAL: CLIENTE -->
+  <div id="modalCliente" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="tituloModalCliente">
+      <div class="modal-header">
+        <div><span class="eyebrow">CADASTRO</span><h2 id="tituloModalCliente">Novo cliente</h2></div>
+        <button class="modal-close" type="button" data-close-modal aria-label="Fechar">×</button>
+      </div>
+      <div class="modal-body">
+        <label>Nome do cliente<input type="text" id="clienteNome" placeholder="Ex.: João da Silva"></label>
+        <div class="form-grid-2">
+          <label>Telefone<input type="text" id="clienteTelefone" placeholder="(55) 99999-9999"></label>
+          <label>E-mail<input type="email" id="clienteEmail" placeholder="cliente@email.com"></label>
+        </div>
+        <p class="form-help">Depois de cadastrar o cliente, cadastre a piscina e por último crie o usuário de acesso.</p>
+        <span id="statusCliente" class="form-status"></span>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" data-close-modal>Cancelar</button>
+        <button type="button" class="btn-primary" id="btnCriarCliente">Cadastrar cliente</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- MODAL: PISCINA -->
+  <div id="modalPiscina" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="tituloModalPiscina">
+      <div class="modal-header">
+        <div><span class="eyebrow">CADASTRO</span><h2 id="tituloModalPiscina">Nova piscina</h2></div>
+        <button class="modal-close" type="button" data-close-modal aria-label="Fechar">×</button>
+      </div>
+      <div class="modal-body">
+        <label>Cliente<select id="clientePiscina"><option value="">Selecione o cliente</option></select></label>
+        <label>Nome da piscina<input type="text" id="nomePiscinaCadastro" placeholder="Ex.: Piscina principal"></label>
+        <label>Localização<input type="text" id="localizacaoPiscinaCadastro" placeholder="Ex.: Residência - fundos"></label>
+        <span id="statusPiscina" class="form-status"></span>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" data-close-modal>Cancelar</button>
+        <button type="button" class="btn-primary" id="btnCriarPiscina">Cadastrar piscina</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- MODAL: USUÁRIO -->
+  <div id="modalUsuario" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="tituloModalUsuario">
+      <div class="modal-header">
+        <div><span class="eyebrow">ACESSO</span><h2 id="tituloModalUsuario">Novo usuário</h2></div>
+        <button class="modal-close" type="button" data-close-modal aria-label="Fechar">×</button>
+      </div>
+      <div class="modal-body">
+        <label>Cliente<select id="usuarioCliente"><option value="">Selecione o cliente</option></select></label>
+        <label>Piscina permitida<select id="usuarioPiscina"><option value="">Selecione primeiro o cliente</option></select></label>
+        <label>Nome do responsável<input type="text" id="usuarioNome" placeholder="Nome de quem utilizará o sistema"></label>
+        <div class="form-grid-2">
+          <label>Usuário de acesso<input type="text" id="usuarioLogin" placeholder="Ex.: joao.silva"></label>
+          <label>Senha inicial<input type="password" id="usuarioSenha" placeholder="Senha inicial"></label>
+        </div>
+        <p class="form-help">Esse usuário verá somente a piscina selecionada acima.</p>
+        <span id="statusUsuario" class="form-status"></span>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" data-close-modal>Cancelar</button>
+        <button type="button" class="btn-primary" id="btnCriarUsuario">Cadastrar usuário</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- MODAL: ESP32 -->
+  <div id="modalParear" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="tituloModalParear">
+      <div class="modal-header">
+        <div><span class="eyebrow">CONTROLADOR</span><h2 id="tituloModalParear">Vincular ESP32</h2></div>
+        <button class="modal-close" type="button" data-close-modal aria-label="Fechar">×</button>
+      </div>
+      <div class="modal-body">
+        <label>Piscina<select id="piscinaPareamento"><option value="">Selecione a piscina</option></select></label>
+        <label>Código de pareamento<input type="text" id="codigoPareamento" inputmode="numeric" maxlength="6" placeholder="6 dígitos"></label>
+        <p class="form-help">Use o código exibido pelo controlador durante a instalação.</p>
+        <span id="statusPareamento" class="form-status"></span>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" data-close-modal>Cancelar</button>
+        <button type="button" class="btn-primary" id="btnParear">Vincular controlador</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="js/app.js?v=20260814-5"></script>
 </body>
 </html>
