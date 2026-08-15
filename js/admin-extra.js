@@ -49,6 +49,7 @@ function prepararAcoesClientes() {
 
         if (typeof carregarClientes === 'function' && typeof carregarPiscinas === 'function') {
           await Promise.all([carregarClientes(), carregarPiscinas()]);
+          prepararAcoesClientes();
         } else {
           window.location.reload();
         }
@@ -75,10 +76,15 @@ document.addEventListener('DOMContentLoaded', () => {
   `;
   document.head.appendChild(style);
 
-  const grid = document.getElementById('clientesGrid');
-  if (grid) {
-    const observer = new MutationObserver(() => prepararAcoesClientes());
-    observer.observe(grid, { childList: true });
+  // Não usa MutationObserver. O observer anterior gerava um ciclo de mutações
+  // ao alterar os botões, bloqueando a thread principal do navegador.
+  if (typeof renderizarClientes === 'function') {
+    const renderOriginal = renderizarClientes;
+    window.renderizarClientes = function (...args) {
+      const resultado = renderOriginal.apply(this, args);
+      prepararAcoesClientes();
+      return resultado;
+    };
   }
 
   prepararAcoesClientes();
