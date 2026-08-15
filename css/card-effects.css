@@ -1,0 +1,33 @@
+:root{--quatrin-card-blue:#075879;--quatrin-card-blue-deep:#062a3d;--quatrin-card-shadow:rgba(7,88,121,.16)}
+
+/* Assinatura visual Quatrin: mesma faixa azul escura da barra superior */
+#adminActions,.welcome-panel,.admin-section,.pool-section,.select-pool-panel,.pool-workspace,.panel-card,.subcard,.equipment-card,.hero,.annual-summary,.months-panel,.detail-panel,.about-card,.team-section,.person-card,.client-card,.pool-card,.action-card,.month-card,.metric,.spec-item,.detail-grid>div,.modal-panel{
+  border-color:rgba(7,88,121,.28)!important;
+  box-shadow:inset 0 3px 0 var(--quatrin-card-blue),0 10px 26px rgba(6,42,61,.075)!important;
+}
+
+/* O bloco de cadastros deixa de usar o ciano claro e passa a usar o azul da marca */
+#adminActions{border-top-color:var(--quatrin-card-blue)!important}
+
+/* Cards que respondem ao mouse */
+.action-card,.client-card,.pool-card,.panel-card,.subcard,.equipment-card,.month-card,.person-card,.metric,.spec-item,.detail-grid>div,.card-piscina{
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background-color .18s ease!important;
+}
+.action-card:hover,.client-card:hover,.pool-card:hover,.panel-card:hover,.subcard:hover,.equipment-card:hover,.month-card:hover,.person-card:hover,.metric:hover,.spec-item:hover,.detail-grid>div:hover,.card-piscina:hover{
+  transform:translateY(-3px);
+  border-color:var(--quatrin-card-blue)!important;
+  box-shadow:inset 0 3px 0 var(--quatrin-card-blue),0 16px 34px var(--quatrin-card-shadow)!important;
+}
+
+/* Mantém os cards escuros da automação coerentes sem clarear o fundo */
+.motor-control-card{
+  box-shadow:inset 0 3px 0 #0b6b8f,0 14px 30px rgba(3,37,54,.22)!important;
+}
+.motor-control-card:hover{
+  border-color:#0b6b8f!important;
+  box-shadow:inset 0 3px 0 #0b6b8f,0 18px 38px rgba(3,37,54,.28)!important;
+}
+
+@media(hover:none){
+  .action-card:hover,.client-card:hover,.pool-card:hover,.panel-card:hover,.subcard:hover,.equipment-card:hover,.month-card:hover,.person-card:hover,.metric:hover,.spec-item:hover,.detail-grid>div:hover,.card-piscina:hover{transform:none}
+}
