@@ -1,26 +1,115 @@
-:root{--quatrin-card-blue:#075879;--quatrin-card-blue-deep:#062a3d;--quatrin-card-shadow:rgba(7,88,121,.16)}
+:root{
+  --quatrin-card-blue:#075879;
+  --quatrin-card-blue-deep:#062a3d;
+  --quatrin-card-shadow:rgba(7,88,121,.16);
+  --quatrin-inner-accent:#20a8c8;
+  --quatrin-inner-border:rgba(22,130,164,.24);
+  --quatrin-inner-bg-start:#e9f6f9;
+  --quatrin-inner-bg-end:#f4fbfc;
+  --quatrin-inner-bg-hover:#e3f3f7;
+  --quatrin-mini-bg:#f7fbfc;
+  --quatrin-mini-border:rgba(41,135,162,.16);
+}
 
-/* Assinatura visual Quatrin: mesma faixa azul escura da barra superior */
-#adminActions,.welcome-panel,.admin-section,.pool-section,.select-pool-panel,.pool-workspace,.panel-card,.subcard,.equipment-card,.hero,.annual-summary,.months-panel,.detail-panel,.about-card,.team-section,.person-card,.client-card,.pool-card,.action-card,.month-card,.metric,.spec-item,.detail-grid>div,.modal-panel{
+/* Cards estruturais: permanecem brancos com assinatura azul-escura da Quatrin. */
+#adminActions,
+.welcome-panel,
+.admin-section,
+.pool-section,
+.select-pool-panel,
+.pool-workspace,
+.hero,
+.annual-summary,
+.months-panel,
+.detail-panel,
+.about-card,
+.team-section,
+.modal-panel{
   border-color:rgba(7,88,121,.28)!important;
   box-shadow:inset 0 3px 0 var(--quatrin-card-blue),0 10px 26px rgba(6,42,61,.075)!important;
 }
 
-/* O bloco de cadastros deixa de usar o ciano claro e passa a usar o azul da marca */
 #adminActions{border-top-color:var(--quatrin-card-blue)!important}
 
-/* Cards que respondem ao mouse */
-.action-card,.client-card,.pool-card,.panel-card,.subcard,.equipment-card,.month-card,.person-card,.metric,.spec-item,.detail-grid>div,.card-piscina{
-  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background-color .18s ease!important;
-}
-.action-card:hover,.client-card:hover,.pool-card:hover,.panel-card:hover,.subcard:hover,.equipment-card:hover,.month-card:hover,.person-card:hover,.metric:hover,.spec-item:hover,.detail-grid>div:hover,.card-piscina:hover{
-  transform:translateY(-3px);
-  border-color:var(--quatrin-card-blue)!important;
-  box-shadow:inset 0 3px 0 var(--quatrin-card-blue),0 16px 34px var(--quatrin-card-shadow)!important;
+/*
+  Cards internos: recebem uma superfície aqua clara para criar hierarquia visual.
+  Assim o card externo continua sendo a "estrutura" e o card interno vira conteúdo.
+*/
+.action-card,
+.client-card,
+.pool-card,
+.panel-card:not(.motor-control-card),
+.subcard,
+.equipment-card,
+.month-card,
+.person-card{
+  background:linear-gradient(145deg,var(--quatrin-inner-bg-start),var(--quatrin-inner-bg-end))!important;
+  border-color:var(--quatrin-inner-border)!important;
+  box-shadow:inset 0 3px 0 var(--quatrin-inner-accent),0 8px 22px rgba(6,74,96,.075)!important;
 }
 
-/* Mantém os cards escuros da automação coerentes sem clarear o fundo */
+/* Componentes menores dentro dos cards internos: mais neutros para não competir com o nível acima. */
+.metric,
+.spec-item,
+.detail-grid>div,
+.client-info-grid,
+.pool-meta,
+.equipment-spec-grid,
+.equipment-single-info,
+.equipment-brand-field,
+.calculation-note{
+  background:var(--quatrin-mini-bg)!important;
+  border-color:var(--quatrin-mini-border)!important;
+  box-shadow:none!important;
+}
+
+/* Interação dos cards internos. */
+.action-card,
+.client-card,
+.pool-card,
+.panel-card,
+.subcard,
+.equipment-card,
+.month-card,
+.person-card,
+.metric,
+.spec-item,
+.detail-grid>div,
+.card-piscina{
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background-color .18s ease,filter .18s ease!important;
+}
+
+.action-card:hover,
+.client-card:hover,
+.pool-card:hover,
+.panel-card:not(.motor-control-card):hover,
+.subcard:hover,
+.equipment-card:hover,
+.month-card:hover,
+.person-card:hover{
+  transform:translateY(-3px);
+  background:linear-gradient(145deg,var(--quatrin-inner-bg-hover),#f0fafc)!important;
+  border-color:var(--quatrin-inner-accent)!important;
+  box-shadow:inset 0 3px 0 var(--quatrin-inner-accent),0 15px 32px rgba(13,101,128,.13)!important;
+}
+
+.metric:hover,
+.spec-item:hover,
+.detail-grid>div:hover{
+  transform:translateY(-2px);
+  border-color:rgba(32,168,200,.42)!important;
+  box-shadow:0 8px 18px rgba(13,101,128,.08)!important;
+}
+
+.card-piscina:hover{
+  transform:translateY(-3px);
+  border-color:var(--quatrin-card-blue)!important;
+  box-shadow:0 16px 34px var(--quatrin-card-shadow)!important;
+}
+
+/* O card de automação continua escuro porque representa o equipamento em operação. */
 .motor-control-card{
+  background:linear-gradient(150deg,#041b2a,#073c58)!important;
   box-shadow:inset 0 3px 0 #0b6b8f,0 14px 30px rgba(3,37,54,.22)!important;
 }
 .motor-control-card:hover{
@@ -29,5 +118,16 @@
 }
 
 @media(hover:none){
-  .action-card:hover,.client-card:hover,.pool-card:hover,.panel-card:hover,.subcard:hover,.equipment-card:hover,.month-card:hover,.person-card:hover,.metric:hover,.spec-item:hover,.detail-grid>div:hover,.card-piscina:hover{transform:none}
+  .action-card:hover,
+  .client-card:hover,
+  .pool-card:hover,
+  .panel-card:hover,
+  .subcard:hover,
+  .equipment-card:hover,
+  .month-card:hover,
+  .person-card:hover,
+  .metric:hover,
+  .spec-item:hover,
+  .detail-grid>div:hover,
+  .card-piscina:hover{transform:none}
 }
