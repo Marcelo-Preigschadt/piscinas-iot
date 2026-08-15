@@ -1,13 +1,11 @@
 const API_BASE = 'https://wqjzrbhbkienlxocykcn.supabase.co/functions/v1/piscinas-api';
+const REPORTS_BASE = 'https://wqjzrbhbkienlxocykcn.supabase.co/functions/v1/piscinas-relatorios';
 
 if (localStorage.getItem('logado') !== 'true' || !localStorage.getItem('token')) {
   limparSessao();
   window.location.href = 'login.html';
 }
-
-if (localStorage.getItem('primeiro_acesso') === 'true') {
-  window.location.href = 'senha.html';
-}
+if (localStorage.getItem('primeiro_acesso') === 'true') window.location.href = 'senha.html';
 
 const perfil = localStorage.getItem('perfil') || 'cliente';
 let piscinasCache = [];
@@ -15,501 +13,68 @@ let clientesCache = [];
 let dispositivosPorPiscina = new Map();
 
 function limparSessao() {
-  ['token','token_expires_at','usuario','nome_usuario','cliente_id','perfil','logado','primeiro_acesso','piscina_id']
-    .forEach(k => localStorage.removeItem(k));
+  ['token','token_expires_at','usuario','nome_usuario','cliente_id','perfil','logado','primeiro_acesso','piscina_id'].forEach(k => localStorage.removeItem(k));
 }
-
-async function apiFetch(path, options = {}) {
+async function fetchAuth(base, path, options = {}) {
   const headers = new Headers(options.headers || {});
   headers.set('Authorization', `Bearer ${localStorage.getItem('token') || ''}`);
   if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
-
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-
+  const res = await fetch(`${base}${path}`, { ...options, headers });
   if (res.status === 401) {
-    limparSessao();
-    window.location.href = 'login.html';
-    throw new Error('Sessão expirada');
+    limparSessao(); window.location.href = 'login.html'; throw new Error('Sessão expirada');
   }
-
   if (res.status === 428) {
-    localStorage.setItem('primeiro_acesso', 'true');
-    window.location.href = 'senha.html';
-    throw new Error('Troca de senha obrigatória');
+    localStorage.setItem('primeiro_acesso', 'true'); window.location.href = 'senha.html'; throw new Error('Troca de senha obrigatória');
   }
-
   return res;
 }
-
-function escapeHtml(v) {
-  return String(v ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
-
-function setStatus(id, texto, erro = false) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = texto || '';
-  el.classList.toggle('error', erro);
-}
-
-function abrirModal(id) {
-  if (perfil !== 'admin') return;
-  const modal = document.getElementById(id);
-  if (!modal) return;
-  modal.classList.remove('hidden');
-  modal.setAttribute('aria-hidden', 'false');
-  document.body.classList.add('modal-open');
-}
-
-function fecharModal(modal) {
-  if (!modal) return;
-  modal.classList.add('hidden');
-  modal.setAttribute('aria-hidden', 'true');
-  if (!document.querySelector('.modal:not(.hidden)')) document.body.classList.remove('modal-open');
-}
-
+const apiFetch = (path, options = {}) => fetchAuth(API_BASE, path, options);
+const reportsFetch = (path, options = {}) => fetchAuth(REPORTS_BASE, path, options);
+function escapeHtml(v) { return String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;'); }
+function setStatus(id, texto, erro = false) { const el=document.getElementById(id); if(!el)return; el.textContent=texto||''; el.classList.toggle('error',erro); }
+function abrirModal(id) { if(perfil!=='admin')return; const modal=document.getElementById(id); if(!modal)return; modal.classList.remove('hidden'); modal.setAttribute('aria-hidden','false'); document.body.classList.add('modal-open'); }
+function fecharModal(modal) { if(!modal)return; modal.classList.add('hidden'); modal.setAttribute('aria-hidden','true'); if(!document.querySelector('.modal:not(.hidden)'))document.body.classList.remove('modal-open'); }
 function configurarModais() {
-  document.querySelectorAll('[data-modal]').forEach(btn => {
-    btn.addEventListener('click', () => abrirModal(btn.dataset.modal));
-  });
-
-  document.querySelectorAll('[data-close-modal]').forEach(btn => {
-    btn.addEventListener('click', () => fecharModal(btn.closest('.modal')));
-  });
-
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-      const aberta = document.querySelector('.modal:not(.hidden)');
-      if (aberta) fecharModal(aberta);
-    }
-  });
+  document.querySelectorAll('[data-modal]').forEach(btn=>btn.addEventListener('click',()=>abrirModal(btn.dataset.modal)));
+  document.querySelectorAll('[data-close-modal]').forEach(btn=>btn.addEventListener('click',()=>fecharModal(btn.closest('.modal'))));
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){const aberta=document.querySelector('.modal:not(.hidden)');if(aberta)fecharModal(aberta);}});
 }
-
 async function carregarClientes() {
-  if (perfil !== 'admin') return;
-
-  const grid = document.getElementById('clientesGrid');
-  if (grid) grid.innerHTML = '<div class="loading-card">Carregando clientes...</div>';
-
-  try {
-    const res = await apiFetch('/clientes');
-    const dados = await res.json().catch(() => ([]));
-    if (!res.ok) throw new Error(dados.erro || 'Erro ao carregar clientes');
-
-    clientesCache = Array.isArray(dados) ? dados : [];
-    renderizarClientes();
-    preencherSelectClientes();
-  } catch (err) {
-    console.error(err);
-    if (grid) grid.innerHTML = `<div class="error-card">${escapeHtml(err.message || 'Erro ao carregar clientes')}</div>`;
-  }
+  if(perfil!=='admin')return;
+  const grid=document.getElementById('clientesGrid'); if(grid)grid.innerHTML='<div class="loading-card">Carregando clientes...</div>';
+  try{const res=await apiFetch('/clientes');const dados=await res.json().catch(()=>[]);if(!res.ok)throw new Error(dados.erro||'Erro ao carregar clientes');clientesCache=Array.isArray(dados)?dados:[];renderizarClientes();preencherSelectClientes();}
+  catch(err){console.error(err);if(grid)grid.innerHTML=`<div class="error-card">${escapeHtml(err.message||'Erro ao carregar clientes')}</div>`;}
 }
-
 function renderizarClientes() {
-  const grid = document.getElementById('clientesGrid');
-  const empty = document.getElementById('emptyClientes');
-  if (!grid || !empty) return;
-
-  grid.innerHTML = '';
-
-  if (!clientesCache.length) {
-    empty.classList.remove('hidden');
-    return;
-  }
-
-  empty.classList.add('hidden');
-
-  clientesCache.forEach(c => {
-    const usuario = Array.isArray(c.usuarios) && c.usuarios.length ? c.usuarios[0] : null;
-    const piscinaUsuario = usuario?.piscina_id
-      ? (c.piscinas || []).find(p => Number(p.id) === Number(usuario.piscina_id))
-      : null;
-    const piscina = piscinaUsuario || ((c.piscinas || []).length ? c.piscinas[0] : null);
-    const acessoStatus = usuario
-      ? (usuario.primeiro_acesso ? 'Senha provisória' : 'Acesso ativo')
-      : 'Sem usuário';
-    const acessoClasse = usuario?.primeiro_acesso ? 'warning' : (usuario ? 'success' : 'neutral');
-
-    const card = document.createElement('article');
-    card.className = 'client-card';
-    card.innerHTML = `
-      <div class="client-card-top">
-        <div>
-          <span class="eyebrow">CLIENTE</span>
-          <h3>${escapeHtml(c.nome)}</h3>
-          <p>${escapeHtml(c.email || 'E-mail não informado')}${c.telefone ? ' • ' + escapeHtml(c.telefone) : ''}</p>
-        </div>
-        <span class="status-chip ${acessoClasse}">${acessoStatus}</span>
-      </div>
-
-      <div class="client-info-grid">
-        <div>
-          <span>Usuário de acesso</span>
-          <strong>${usuario ? escapeHtml(usuario.usuario) : 'Não cadastrado'}</strong>
-        </div>
-        <div>
-          <span>Piscina vinculada</span>
-          <strong>${piscina ? escapeHtml(piscina.nome) : 'Nenhuma piscina'}</strong>
-        </div>
-      </div>
-
-      <button class="btn-secondary btn-link-client" type="button" data-link-client="${Number(c.id)}">
-        ${piscina ? 'Alterar piscina vinculada' : 'Vincular piscina'}
-      </button>
-    `;
+  const grid=document.getElementById('clientesGrid'),empty=document.getElementById('emptyClientes');if(!grid||!empty)return;grid.innerHTML='';
+  if(!clientesCache.length){empty.classList.remove('hidden');return;}empty.classList.add('hidden');
+  clientesCache.forEach(c=>{
+    const usuario=Array.isArray(c.usuarios)&&c.usuarios.length?c.usuarios[0]:null;
+    const piscinaUsuario=usuario?.piscina_id?(c.piscinas||[]).find(p=>Number(p.id)===Number(usuario.piscina_id)):null;
+    const piscina=piscinaUsuario||((c.piscinas||[]).length?c.piscinas[0]:null);
+    const acessoStatus=usuario?(usuario.primeiro_acesso?'Senha provisória':'Acesso ativo'):'Sem usuário';
+    const acessoClasse=usuario?.primeiro_acesso?'warning':(usuario?'success':'neutral');
+    const card=document.createElement('article');card.className='client-card';
+    card.innerHTML=`<div class="client-card-top"><div><span class="eyebrow">CLIENTE</span><h3>${escapeHtml(c.nome)}</h3><p>${escapeHtml(c.email||'E-mail não informado')}${c.telefone?' • '+escapeHtml(c.telefone):''}</p></div><span class="status-chip ${acessoClasse}">${acessoStatus}</span></div><div class="client-info-grid"><div><span>Usuário de acesso</span><strong>${usuario?escapeHtml(usuario.usuario):'Não cadastrado'}</strong></div><div><span>Piscina vinculada</span><strong>${piscina?escapeHtml(piscina.nome):'Nenhuma piscina'}</strong></div></div><div class="client-actions"><button class="btn-secondary" type="button" data-link-client="${Number(c.id)}">${piscina?'Alterar piscina vinculada':'Vincular piscina'}</button>${usuario?`<button class="btn-danger-light" type="button" data-delete-user="${Number(usuario.id)}" data-user-name="${escapeHtml(usuario.usuario)}">Excluir usuário</button>`:''}</div>`;
     grid.appendChild(card);
   });
-
-  grid.querySelectorAll('[data-link-client]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const clienteId = String(btn.dataset.linkClient);
-      const select = document.getElementById('clienteVinculo');
-      if (select) select.value = clienteId;
-      const cliente = clientesCache.find(c => Number(c.id) === Number(clienteId));
-      const usuario = cliente?.usuarios?.[0];
-      if (usuario?.piscina_id) {
-        const piscinaSelect = document.getElementById('piscinaVinculo');
-        if (piscinaSelect) piscinaSelect.value = String(usuario.piscina_id);
-      }
-      abrirModal('modalVinculo');
-    });
-  });
+  grid.querySelectorAll('[data-link-client]').forEach(btn=>btn.addEventListener('click',()=>{const clienteId=String(btn.dataset.linkClient);const select=document.getElementById('clienteVinculo');if(select)select.value=clienteId;const cliente=clientesCache.find(c=>Number(c.id)===Number(clienteId));const usuario=cliente?.usuarios?.[0];const piscinaSelect=document.getElementById('piscinaVinculo');if(piscinaSelect&&usuario?.piscina_id)piscinaSelect.value=String(usuario.piscina_id);abrirModal('modalVinculo');}));
+  grid.querySelectorAll('[data-delete-user]').forEach(btn=>btn.addEventListener('click',()=>excluirUsuario(Number(btn.dataset.deleteUser),btn.dataset.userName)));
 }
-
-function preencherSelectClientes() {
-  const select = document.getElementById('clienteVinculo');
-  if (!select) return;
-
-  const atual = select.value;
-  select.innerHTML = '<option value="">Selecione o cliente</option>';
-  clientesCache.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.id;
-    opt.textContent = c.nome;
-    select.appendChild(opt);
-  });
-  if ([...select.options].some(o => o.value === atual)) select.value = atual;
-}
-
-async function carregarDispositivos() {
-  dispositivosPorPiscina = new Map();
-  try {
-    const res = await apiFetch('/devices');
-    const dados = await res.json().catch(() => ([]));
-    if (!res.ok || !Array.isArray(dados)) return;
-
-    dados.forEach(d => {
-      if (d.piscina?.id) dispositivosPorPiscina.set(Number(d.piscina.id), d);
-    });
-  } catch (err) {
-    console.error('Erro ao carregar dispositivos:', err);
-  }
-}
-
-function dispositivoOnline(device) {
-  if (!device?.ultimo_ping) return false;
-  return Date.now() - new Date(device.ultimo_ping).getTime() < 45000;
-}
-
-async function carregarPiscinas() {
-  const grid = document.getElementById('piscinasGrid');
-  const empty = document.getElementById('emptyPiscinas');
-  grid.innerHTML = '<div class="loading-card">Carregando piscinas...</div>';
-
-  try {
-    await carregarDispositivos();
-    const res = await apiFetch('/piscinas');
-    const dados = await res.json().catch(() => ([]));
-    if (!res.ok) throw new Error(dados.erro || 'Erro ao carregar piscinas');
-
-    piscinasCache = Array.isArray(dados) ? dados : [];
-    renderizarPiscinas();
-    preencherSelectPiscinas();
-  } catch (err) {
-    console.error(err);
-    grid.innerHTML = `<div class="error-card">${escapeHtml(err.message || 'Erro ao carregar piscinas')}</div>`;
-    empty.classList.add('hidden');
-  }
-}
-
-function renderizarPiscinas() {
-  const grid = document.getElementById('piscinasGrid');
-  const empty = document.getElementById('emptyPiscinas');
-  grid.innerHTML = '';
-
-  if (!piscinasCache.length) {
-    empty.classList.remove('hidden');
-    document.getElementById('emptyPiscinasTexto').textContent = perfil === 'admin'
-      ? 'Cadastre uma piscina para começar.'
-      : 'Nenhuma piscina foi vinculada ao seu usuário. Entre em contato com o administrador.';
-    return;
-  }
-
-  empty.classList.add('hidden');
-
-  piscinasCache.forEach(p => {
-    const device = dispositivosPorPiscina.get(Number(p.id));
-    const online = dispositivoOnline(device);
-    const statusClasse = !device ? 'neutral' : (online ? 'online' : 'offline');
-    const statusTexto = !device ? 'Sem controlador' : (online ? 'Online' : 'Offline');
-    const motorTexto = device ? (device.estado_motor === 'ligado' ? 'Motor ligado' : 'Motor desligado') : 'ESP32 não vinculado';
-    const clienteTexto = p.clientes?.nome || 'Sem cliente vinculado';
-
-    const card = document.createElement('article');
-    card.className = 'pool-card';
-    card.innerHTML = `
-      <div class="pool-card-top">
-        <div>
-          ${perfil === 'admin' ? `<span class="pool-client">${escapeHtml(clienteTexto)}</span>` : ''}
-          <h3>${escapeHtml(p.nome)}</h3>
-          <p>${escapeHtml(p.localizacao || 'Localização não informada')}</p>
-        </div>
-        <span class="status-chip ${statusClasse}">${statusTexto}</span>
-      </div>
-
-      <div class="pool-meta">
-        <span><strong>Controlador</strong>${device ? escapeHtml(device.device_id) : 'Não vinculado'}</span>
-        <span><strong>Motor</strong>${escapeHtml(motorTexto)}</span>
-      </div>
-
-      <div class="pool-actions">
-        <button class="btn-primary btn-open-pool" type="button" data-open-pool="${Number(p.id)}">Abrir piscina</button>
-        ${perfil === 'admin' ? `<button class="btn-danger-light" type="button" data-remove-pool="${Number(p.id)}">Remover</button>` : ''}
-      </div>
-    `;
-    grid.appendChild(card);
-  });
-
-  grid.querySelectorAll('[data-open-pool]').forEach(btn => {
-    btn.addEventListener('click', () => abrirPiscina(Number(btn.dataset.openPool)));
-  });
-
-  grid.querySelectorAll('[data-remove-pool]').forEach(btn => {
-    btn.addEventListener('click', () => removerPiscina(Number(btn.dataset.removePool)));
-  });
-}
-
-function preencherSelectPiscinas() {
-  ['piscinaPareamento', 'piscinaVinculo'].forEach(id => {
-    const select = document.getElementById(id);
-    if (!select) return;
-
-    const atual = select.value;
-    select.innerHTML = '<option value="">Selecione a piscina</option>';
-
-    piscinasCache.forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p.id;
-      const dono = p.clientes?.nome ? ` — ${p.clientes.nome}` : ' — sem cliente';
-      opt.textContent = `${p.nome}${perfil === 'admin' ? dono : ''}`;
-      select.appendChild(opt);
-    });
-
-    if ([...select.options].some(o => o.value === atual)) select.value = atual;
-  });
-}
-
-function abrirPiscina(id) {
-  window.location.href = `agenda.html?piscina=${encodeURIComponent(id)}`;
-}
-
-async function criarCliente() {
-  const payload = {
-    nome: document.getElementById('clienteNome').value.trim(),
-    telefone: document.getElementById('clienteTelefone').value.trim(),
-    email: document.getElementById('clienteEmail').value.trim(),
-    usuario: document.getElementById('clienteUsuario').value.trim(),
-    senha_provisoria: document.getElementById('clienteSenhaProvisoria').value
-  };
-
-  if (!payload.nome || !payload.usuario || !payload.senha_provisoria) {
-    return setStatus('statusCliente', 'Informe nome, usuário e senha provisória.', true);
-  }
-  if (payload.senha_provisoria.length < 6) {
-    return setStatus('statusCliente', 'A senha provisória deve ter pelo menos 6 caracteres.', true);
-  }
-
-  setStatus('statusCliente', 'Cadastrando...');
-
-  try {
-    const res = await apiFetch('/clientes', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.erro || 'Erro ao cadastrar cliente');
-
-    ['clienteNome','clienteTelefone','clienteEmail','clienteUsuario','clienteSenhaProvisoria']
-      .forEach(id => document.getElementById(id).value = '');
-
-    await carregarClientes();
-    setStatus('statusCliente', 'Cliente cadastrado com acesso provisório.');
-    setTimeout(() => fecharModal(document.getElementById('modalCliente')), 900);
-  } catch (err) {
-    setStatus('statusCliente', err.message || 'Erro ao cadastrar cliente', true);
-  }
-}
-
-async function criarPiscina() {
-  const payload = {
-    nome: document.getElementById('nomePiscinaCadastro').value.trim(),
-    localizacao: document.getElementById('localizacaoPiscinaCadastro').value.trim()
-  };
-
-  if (!payload.nome) return setStatus('statusPiscina', 'Informe o nome da piscina.', true);
-
-  setStatus('statusPiscina', 'Cadastrando...');
-
-  try {
-    const res = await apiFetch('/piscinas', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.erro || 'Erro ao cadastrar piscina');
-
-    document.getElementById('nomePiscinaCadastro').value = '';
-    document.getElementById('localizacaoPiscinaCadastro').value = '';
-
-    await carregarPiscinas();
-    setStatus('statusPiscina', 'Piscina cadastrada. Agora faça o vínculo com o cliente.');
-    setTimeout(() => fecharModal(document.getElementById('modalPiscina')), 1000);
-  } catch (err) {
-    setStatus('statusPiscina', err.message || 'Erro ao cadastrar piscina', true);
-  }
-}
-
-async function vincularClientePiscina() {
-  const clienteId = Number(document.getElementById('clienteVinculo').value || 0);
-  const piscinaId = Number(document.getElementById('piscinaVinculo').value || 0);
-
-  if (!clienteId || !piscinaId) {
-    return setStatus('statusVinculo', 'Selecione o cliente e a piscina.', true);
-  }
-
-  setStatus('statusVinculo', 'Salvando vínculo...');
-
-  try {
-    const res = await apiFetch('/vinculos/cliente-piscina', {
-      method: 'POST',
-      body: JSON.stringify({ cliente_id: clienteId, piscina_id: piscinaId })
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.erro || 'Erro ao salvar vínculo');
-
-    await Promise.all([carregarClientes(), carregarPiscinas()]);
-    setStatus('statusVinculo', `${data.cliente_nome} vinculado à piscina ${data.piscina_nome}.`);
-    setTimeout(() => fecharModal(document.getElementById('modalVinculo')), 1100);
-  } catch (err) {
-    setStatus('statusVinculo', err.message || 'Erro ao salvar vínculo', true);
-  }
-}
-
-async function parearDispositivo() {
-  const piscinaId = Number(document.getElementById('piscinaPareamento').value || 0);
-  const codigo = document.getElementById('codigoPareamento').value.trim();
-
-  if (!piscinaId) return setStatus('statusPareamento', 'Selecione a piscina.', true);
-  if (!/^\d{6}$/.test(codigo)) return setStatus('statusPareamento', 'Informe o código de 6 dígitos.', true);
-
-  setStatus('statusPareamento', 'Vinculando...');
-
-  try {
-    const res = await apiFetch('/devices/pair', {
-      method: 'POST',
-      body: JSON.stringify({ piscina_id: piscinaId, pairing_code: codigo })
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.erro || 'Falha no pareamento');
-
-    document.getElementById('codigoPareamento').value = '';
-    await carregarPiscinas();
-    setStatus('statusPareamento', `Controlador ${data.device_id} vinculado.`);
-    setTimeout(() => fecharModal(document.getElementById('modalParear')), 900);
-  } catch (err) {
-    setStatus('statusPareamento', err.message || 'Falha no pareamento', true);
-  }
-}
-
-async function removerPiscina(id) {
-  const piscina = piscinasCache.find(p => Number(p.id) === Number(id));
-  if (!confirm(`Remover ${piscina?.nome || 'esta piscina'} e sua agenda?`)) return;
-
-  try {
-    const res = await apiFetch(`/piscinas/${id}`, { method: 'DELETE' });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.erro || 'Erro ao remover piscina');
-    await Promise.all([carregarPiscinas(), perfil === 'admin' ? carregarClientes() : Promise.resolve()]);
-  } catch (err) {
-    alert(err.message || 'Erro ao remover piscina');
-  }
-}
-
-async function logout() {
-  try { await apiFetch('/logout', { method: 'POST' }); } catch (_) {}
-  limparSessao();
-  window.location.href = 'login.html';
-}
-
-function configurarPerfil() {
-  const nome = localStorage.getItem('nome_usuario') || localStorage.getItem('usuario') || 'Usuário';
-  document.getElementById('userDisplay').textContent = nome;
-  document.getElementById('perfilDisplay').textContent = perfil === 'admin' ? 'Administrador' : 'Cliente';
-
-  if (perfil === 'admin') {
-    document.getElementById('adminActions').classList.remove('hidden');
-    document.getElementById('adminClientes').classList.remove('hidden');
-    document.getElementById('painelTipo').textContent = 'ADMINISTRAÇÃO';
-    document.getElementById('painelTitulo').textContent = 'Painel de controle';
-    document.getElementById('painelDescricao').textContent = 'Gerencie clientes, piscinas, vínculos e controladores em um único lugar.';
-    document.getElementById('piscinasTitulo').textContent = 'Piscinas cadastradas';
-    document.getElementById('piscinasDescricao').textContent = 'Visualize todas as piscinas, inclusive as que ainda não possuem cliente ou ESP32.';
-  } else {
-    document.getElementById('painelTipo').textContent = 'MINHA PISCINA';
-    document.getElementById('painelTitulo').textContent = `Olá, ${nome}`;
-    document.getElementById('painelDescricao').textContent = 'Acesse sua piscina para controlar o motor e acompanhar as informações do sistema.';
-    document.getElementById('piscinasTitulo').textContent = 'Sua piscina';
-    document.getElementById('piscinasDescricao').textContent = 'Somente a piscina vinculada ao seu acesso aparece aqui.';
-  }
-}
-
-async function atualizarTudo() {
-  const btn = document.getElementById('btnAtualizar');
-  btn.disabled = true;
-  btn.textContent = 'Atualizando...';
-
-  try {
-    if (perfil === 'admin') {
-      await Promise.all([carregarClientes(), carregarPiscinas()]);
-    } else {
-      await carregarPiscinas();
-    }
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Atualizar';
-  }
-}
-
-document.addEventListener('DOMContentLoaded', async () => {
-  configurarPerfil();
-  configurarModais();
-
-  document.getElementById('btnSair').addEventListener('click', logout);
-  document.getElementById('btnAtualizar').addEventListener('click', atualizarTudo);
-
-  if (perfil === 'admin') {
-    document.getElementById('btnCriarCliente').addEventListener('click', criarCliente);
-    document.getElementById('btnCriarPiscina').addEventListener('click', criarPiscina);
-    document.getElementById('btnVincularClientePiscina').addEventListener('click', vincularClientePiscina);
-    document.getElementById('btnParear').addEventListener('click', parearDispositivo);
-
-    await Promise.all([carregarClientes(), carregarPiscinas()]);
-  } else {
-    await carregarPiscinas();
-  }
-});
+async function excluirUsuario(id,usuario){if(!confirm(`Excluir o usuário ${usuario||''}? O cliente e a piscina permanecerão cadastrados.`))return;try{const res=await reportsFetch(`/usuarios/${id}`,{method:'DELETE'});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.erro||'Erro ao excluir usuário');await carregarClientes();}catch(err){alert(err.message||'Erro ao excluir usuário');}}
+function preencherSelectClientes(){const select=document.getElementById('clienteVinculo');if(!select)return;const atual=select.value;select.innerHTML='<option value="">Selecione o cliente</option>';clientesCache.forEach(c=>{const opt=document.createElement('option');opt.value=c.id;opt.textContent=c.nome;select.appendChild(opt);});if([...select.options].some(o=>o.value===atual))select.value=atual;}
+async function carregarDispositivos(){dispositivosPorPiscina=new Map();try{const res=await apiFetch('/devices');const dados=await res.json().catch(()=>[]);if(!res.ok||!Array.isArray(dados))return;dados.forEach(d=>{if(d.piscina?.id)dispositivosPorPiscina.set(Number(d.piscina.id),d);});}catch(err){console.error('Erro ao carregar dispositivos:',err);}}
+function dispositivoOnline(device){return!!device?.ultimo_ping&&Date.now()-new Date(device.ultimo_ping).getTime()<45000;}
+async function carregarPiscinas(){const grid=document.getElementById('piscinasGrid'),empty=document.getElementById('emptyPiscinas');grid.innerHTML='<div class="loading-card">Carregando piscinas...</div>';try{await carregarDispositivos();const res=await apiFetch('/piscinas');const dados=await res.json().catch(()=>[]);if(!res.ok)throw new Error(dados.erro||'Erro ao carregar piscinas');piscinasCache=Array.isArray(dados)?dados:[];renderizarPiscinas();preencherSelectPiscinas();}catch(err){grid.innerHTML=`<div class="error-card">${escapeHtml(err.message||'Erro ao carregar piscinas')}</div>`;empty.classList.add('hidden');}}
+function renderizarPiscinas(){const grid=document.getElementById('piscinasGrid'),empty=document.getElementById('emptyPiscinas');grid.innerHTML='';if(!piscinasCache.length){empty.classList.remove('hidden');document.getElementById('emptyPiscinasTexto').textContent=perfil==='admin'?'Cadastre uma piscina para começar.':'Nenhuma piscina foi vinculada ao seu usuário.';return;}empty.classList.add('hidden');piscinasCache.forEach(p=>{const device=dispositivosPorPiscina.get(Number(p.id)),online=dispositivoOnline(device),statusClasse=!device?'neutral':(online?'online':'offline'),statusTexto=!device?'Sem controlador':(online?'Online':'Offline'),motorTexto=device?(device.estado_motor==='ligado'?'Motor ligado':'Motor desligado'):'ESP32 não vinculado',clienteTexto=p.clientes?.nome||'Sem cliente vinculado';const card=document.createElement('article');card.className='pool-card';card.innerHTML=`<div class="pool-card-top"><div>${perfil==='admin'?`<span class="pool-client">${escapeHtml(clienteTexto)}</span>`:''}<h3>${escapeHtml(p.nome)}</h3><p>${escapeHtml(p.localizacao||'Localização não informada')}</p></div><span class="status-chip ${statusClasse}">${statusTexto}</span></div><div class="pool-meta"><span><strong>Controlador</strong>${device?escapeHtml(device.device_id):'Não vinculado'}</span><span><strong>Motor</strong>${escapeHtml(motorTexto)}</span></div><div class="pool-actions"><button class="btn-primary btn-open-pool" type="button" data-open-pool="${Number(p.id)}">Abrir piscina</button>${perfil==='admin'?`<button class="btn-danger-light" type="button" data-remove-pool="${Number(p.id)}">Remover</button>`:''}</div>`;grid.appendChild(card);});grid.querySelectorAll('[data-open-pool]').forEach(btn=>btn.addEventListener('click',()=>abrirPiscina(Number(btn.dataset.openPool))));grid.querySelectorAll('[data-remove-pool]').forEach(btn=>btn.addEventListener('click',()=>removerPiscina(Number(btn.dataset.removePool))));}
+function preencherSelectPiscinas(){['piscinaPareamento','piscinaVinculo'].forEach(id=>{const select=document.getElementById(id);if(!select)return;const atual=select.value;select.innerHTML='<option value="">Selecione a piscina</option>';piscinasCache.forEach(p=>{const opt=document.createElement('option');opt.value=p.id;const dono=p.clientes?.nome?` — ${p.clientes.nome}`:' — sem cliente';opt.textContent=`${p.nome}${perfil==='admin'?dono:''}`;select.appendChild(opt);});if([...select.options].some(o=>o.value===atual))select.value=atual;});}
+function abrirPiscina(id){window.location.href=`agenda.html?piscina=${encodeURIComponent(id)}`;}
+async function criarCliente(){const payload={nome:document.getElementById('clienteNome').value.trim(),telefone:document.getElementById('clienteTelefone').value.trim(),email:document.getElementById('clienteEmail').value.trim(),usuario:document.getElementById('clienteUsuario').value.trim(),senha_provisoria:document.getElementById('clienteSenhaProvisoria').value};if(!payload.nome||!payload.usuario||!payload.senha_provisoria)return setStatus('statusCliente','Informe nome, usuário e senha provisória.',true);if(payload.senha_provisoria.length<6)return setStatus('statusCliente','A senha provisória deve ter pelo menos 6 caracteres.',true);setStatus('statusCliente','Cadastrando...');try{const res=await apiFetch('/clientes',{method:'POST',body:JSON.stringify(payload)});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.erro||'Erro ao cadastrar cliente');['clienteNome','clienteTelefone','clienteEmail','clienteUsuario','clienteSenhaProvisoria'].forEach(id=>document.getElementById(id).value='');await carregarClientes();setStatus('statusCliente','Cliente cadastrado com acesso provisório.');setTimeout(()=>fecharModal(document.getElementById('modalCliente')),900);}catch(err){setStatus('statusCliente',err.message||'Erro ao cadastrar cliente',true);}}
+async function criarPiscina(){const payload={nome:document.getElementById('nomePiscinaCadastro').value.trim(),localizacao:document.getElementById('localizacaoPiscinaCadastro').value.trim()};if(!payload.nome)return setStatus('statusPiscina','Informe o nome da piscina.',true);setStatus('statusPiscina','Cadastrando...');try{const res=await apiFetch('/piscinas',{method:'POST',body:JSON.stringify(payload)});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.erro||'Erro ao cadastrar piscina');document.getElementById('nomePiscinaCadastro').value='';document.getElementById('localizacaoPiscinaCadastro').value='';await carregarPiscinas();setStatus('statusPiscina','Piscina cadastrada. Agora faça o vínculo com o cliente.');setTimeout(()=>fecharModal(document.getElementById('modalPiscina')),1000);}catch(err){setStatus('statusPiscina',err.message||'Erro ao cadastrar piscina',true);}}
+async function vincularClientePiscina(){const clienteId=Number(document.getElementById('clienteVinculo').value||0),piscinaId=Number(document.getElementById('piscinaVinculo').value||0);if(!clienteId||!piscinaId)return setStatus('statusVinculo','Selecione o cliente e a piscina.',true);setStatus('statusVinculo','Salvando vínculo...');try{const res=await apiFetch('/vinculos/cliente-piscina',{method:'POST',body:JSON.stringify({cliente_id:clienteId,piscina_id:piscinaId})});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.erro||'Erro ao salvar vínculo');await Promise.all([carregarClientes(),carregarPiscinas()]);setStatus('statusVinculo',`${data.cliente_nome} vinculado à piscina ${data.piscina_nome}.`);setTimeout(()=>fecharModal(document.getElementById('modalVinculo')),1100);}catch(err){setStatus('statusVinculo',err.message||'Erro ao salvar vínculo',true);}}
+async function parearDispositivo(){const piscinaId=Number(document.getElementById('piscinaPareamento').value||0),codigo=document.getElementById('codigoPareamento').value.trim();if(!piscinaId)return setStatus('statusPareamento','Selecione a piscina.',true);if(!/^\d{6}$/.test(codigo))return setStatus('statusPareamento','Informe o código de 6 dígitos.',true);setStatus('statusPareamento','Vinculando...');try{const res=await apiFetch('/devices/pair',{method:'POST',body:JSON.stringify({piscina_id:piscinaId,pairing_code:codigo})});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.erro||'Falha no pareamento');document.getElementById('codigoPareamento').value='';await carregarPiscinas();setStatus('statusPareamento',`Controlador ${data.device_id} vinculado.`);setTimeout(()=>fecharModal(document.getElementById('modalParear')),900);}catch(err){setStatus('statusPareamento',err.message||'Falha no pareamento',true);}}
+async function removerPiscina(id){const piscina=piscinasCache.find(p=>Number(p.id)===Number(id));if(!confirm(`Remover ${piscina?.nome||'esta piscina'} e sua agenda?`))return;try{const res=await apiFetch(`/piscinas/${id}`,{method:'DELETE'});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.erro||'Erro ao remover piscina');await Promise.all([carregarPiscinas(),perfil==='admin'?carregarClientes():Promise.resolve()]);}catch(err){alert(err.message||'Erro ao remover piscina');}}
+async function logout(){try{await apiFetch('/logout',{method:'POST'});}catch(_){}limparSessao();window.location.href='login.html';}
+function configurarPerfil(){const nome=localStorage.getItem('nome_usuario')||localStorage.getItem('usuario')||'Usuário';document.getElementById('userDisplay').textContent=nome;document.getElementById('perfilDisplay').textContent=perfil==='admin'?'Administrador':'Cliente';if(perfil==='admin'){document.getElementById('adminActions').classList.remove('hidden');document.getElementById('adminClientes').classList.remove('hidden');document.getElementById('navPiscinas').classList.remove('hidden');document.getElementById('painelTipo').textContent='QUATRIN PISCINAS · ADMINISTRAÇÃO';document.getElementById('painelTitulo').textContent='Central de gestão';document.getElementById('painelDescricao').textContent='Gerencie clientes, piscinas, controladores e operação do sistema Quatrin AquaControl.';document.getElementById('piscinasTitulo').textContent='Piscinas cadastradas';document.getElementById('piscinasDescricao').textContent='Todas as instalações registradas, inclusive as que ainda não possuem cliente ou ESP32.';}else{document.getElementById('painelTipo').textContent='QUATRIN AQUACONTROL';document.getElementById('painelTitulo').textContent=`Olá, ${nome}`;document.getElementById('painelDescricao').textContent='Acesse sua piscina para acompanhar motor, consumo, programação e qualidade da água.';document.getElementById('piscinasTitulo').textContent='Sua piscina';document.getElementById('piscinasDescricao').textContent='Somente a instalação vinculada ao seu acesso aparece aqui.';}}
+async function atualizarTudo(){const btn=document.getElementById('btnAtualizar');btn.disabled=true;btn.textContent='Atualizando...';try{if(perfil==='admin')await Promise.all([carregarClientes(),carregarPiscinas()]);else await carregarPiscinas();}finally{btn.disabled=false;btn.textContent='Atualizar dados';}}
+document.addEventListener('DOMContentLoaded',async()=>{configurarPerfil();configurarModais();document.getElementById('btnSair').addEventListener('click',logout);document.getElementById('btnAtualizar').addEventListener('click',atualizarTudo);if(perfil==='admin'){document.getElementById('btnCriarCliente').addEventListener('click',criarCliente);document.getElementById('btnCriarPiscina').addEventListener('click',criarPiscina);document.getElementById('btnVincularClientePiscina').addEventListener('click',vincularClientePiscina);document.getElementById('btnParear').addEventListener('click',parearDispositivo);await Promise.all([carregarClientes(),carregarPiscinas()]);}else await carregarPiscinas();});
