@@ -8,8 +8,8 @@
   <meta http-equiv="Expires" content="0">
   <meta name="theme-color" content="#061c2a">
   <title>Piscina | Quatrin AquaControl</title>
-  <link rel="stylesheet" href="css/agenda.css?v=20260814-9">
-  <link rel="stylesheet" href="css/equipamentos.css?v=20260814-9">
+  <link rel="stylesheet" href="css/agenda.css?v=20260814-10">
+  <link rel="stylesheet" href="css/equipamentos.css?v=20260814-10">
 </head>
 <body>
 <header class="appbar">
@@ -59,44 +59,11 @@
       </section>
     </div>
 
-    <section id="equipamentosResumo" class="subcard equipment-section">
-      <div class="section-title-row equipment-heading-row">
-        <div><span class="eyebrow">EQUIPAMENTOS</span><h2>Equipamentos cadastrados</h2><p>Dados técnicos do conjunto de filtragem desta piscina.</p></div>
-        <button type="button" id="btnEditarEquipamentosGeral" class="btn-secondary equipment-admin hidden">Cadastrar / editar equipamentos</button>
-      </div>
-
-      <div class="equipment-grid">
-        <article class="equipment-card equipment-card-motor">
-          <div class="equipment-card-head"><div><span class="equipment-type">MOTOR</span><h3 id="cardMotorTitulo">Dados do motor</h3></div><span id="motorCadastroStatus" class="equipment-status">Não cadastrado</span></div>
-          <div class="equipment-spec-grid">
-            <div><span>Fabricante</span><strong id="resumoMotorFabricante">Não informado</strong></div>
-            <div><span>Modelo</span><strong id="resumoMotorModelo">Não informado</strong></div>
-            <div><span>Potência nominal</span><strong id="resumoMotorPotencia">Não informado</strong></div>
-            <div><span>Potência elétrica</span><strong id="resumoMotorPotenciaW">Não informado</strong></div>
-            <div><span>Tensão</span><strong id="resumoMotorTensao">Não informado</strong></div>
-            <div><span>Corrente nominal</span><strong id="resumoMotorCorrente">Não informado</strong></div>
-            <div><span>Tarifa de energia</span><strong id="resumoTarifa">Não informada</strong></div>
-            <div class="equipment-wide"><span>Observações</span><strong id="resumoMotorObservacoes">Não informado</strong></div>
-          </div>
-          <div class="equipment-actions equipment-admin hidden"><button type="button" class="btn-secondary" data-edit-equipment="motor">Editar</button><button type="button" class="btn-danger" data-delete-equipment="motor">Excluir</button></div>
-        </article>
-
-        <article class="equipment-card">
-          <div class="equipment-card-head"><div><span class="equipment-type">BOMBA</span><h3>Bomba da piscina</h3></div><span id="bombaCadastroStatus" class="equipment-status">Não cadastrada</span></div>
-          <div class="equipment-single-info"><span>Marca da bomba</span><strong id="resumoBombaMarca">Não informada</strong></div>
-          <div class="equipment-actions equipment-admin hidden"><button type="button" class="btn-secondary" data-edit-equipment="bomba">Editar</button><button type="button" class="btn-danger" data-delete-equipment="bomba">Excluir</button></div>
-        </article>
-
-        <article class="equipment-card">
-          <div class="equipment-card-head"><div><span class="equipment-type">FILTRO</span><h3>Filtro da piscina</h3></div><span id="filtroCadastroStatus" class="equipment-status">Não cadastrado</span></div>
-          <div class="equipment-single-info"><span>Marca do filtro</span><strong id="resumoFiltroMarca">Não informada</strong></div>
-          <div class="equipment-actions equipment-admin hidden"><button type="button" class="btn-secondary" data-edit-equipment="filtro">Editar</button><button type="button" class="btn-danger" data-delete-equipment="filtro">Excluir</button></div>
-        </article>
-      </div>
-    </section>
-
     <section id="dadosMotorEditor" class="subcard hidden equipment-editor">
-      <div class="section-title-row"><div><span class="eyebrow">CONFIGURAÇÃO ADMINISTRATIVA</span><h2>Cadastro de equipamentos e energia</h2><p>Cadastre motor, bomba e filtro. A potência elétrica em watts tem prioridade no cálculo; se ficar vazia, o sistema converte a potência em CV para kW.</p></div><span id="statusSalvarMotor" class="save-status"></span></div>
+      <div class="section-title-row">
+        <div><span class="eyebrow">CONFIGURAÇÃO ADMINISTRATIVA</span><h2>Cadastro de equipamentos e energia</h2><p>Cadastre os dados do motor e, logo abaixo, a marca da bomba e do filtro. Depois de salvar, o formulário é substituído pelos cards dos equipamentos cadastrados.</p></div>
+        <span id="statusSalvarMotor" class="save-status"></span>
+      </div>
       <div class="motor-form-grid">
         <div class="field-group"><label for="motorFabricante">Fabricante do motor</label><input type="text" id="motorFabricante" placeholder="Ex.: WEG"></div>
         <div class="field-group"><label for="motorModelo">Modelo do motor</label><input type="text" id="motorModelo" placeholder="Ex.: W22"></div>
@@ -112,6 +79,41 @@
       <div class="editor-actions"><button type="button" id="btnCancelarEquipamentos" class="btn-secondary">Cancelar</button><button type="button" id="btnSalvarMotor" class="btn-primary">Salvar equipamentos</button></div>
     </section>
 
+    <section id="equipamentosResumo" class="subcard equipment-section hidden">
+      <div class="section-title-row equipment-heading-row">
+        <div><span class="eyebrow">EQUIPAMENTOS</span><h2>Equipamentos cadastrados</h2><p>Somente os equipamentos que já possuem cadastro aparecem nesta área.</p></div>
+      </div>
+
+      <div class="equipment-grid">
+        <article id="cardEquipMotor" class="equipment-card equipment-card-motor hidden">
+          <div class="equipment-card-head"><div><span class="equipment-type">MOTOR</span><h3>Dados do motor</h3></div><span id="motorCadastroStatus" class="equipment-status ok">Cadastrado</span></div>
+          <div class="equipment-spec-grid">
+            <div><span>Fabricante</span><strong id="resumoMotorFabricante">Não informado</strong></div>
+            <div><span>Modelo</span><strong id="resumoMotorModelo">Não informado</strong></div>
+            <div><span>Potência nominal</span><strong id="resumoMotorPotencia">Não informado</strong></div>
+            <div><span>Potência elétrica</span><strong id="resumoMotorPotenciaW">Não informado</strong></div>
+            <div><span>Tensão</span><strong id="resumoMotorTensao">Não informado</strong></div>
+            <div><span>Corrente nominal</span><strong id="resumoMotorCorrente">Não informado</strong></div>
+            <div><span>Tarifa de energia</span><strong id="resumoTarifa">Não informada</strong></div>
+            <div class="equipment-wide"><span>Observações</span><strong id="resumoMotorObservacoes">Não informado</strong></div>
+          </div>
+          <div class="equipment-actions equipment-admin hidden"><button type="button" class="btn-secondary" data-edit-equipment="motor">Editar</button><button type="button" class="btn-danger" data-delete-equipment="motor">Excluir</button></div>
+        </article>
+
+        <article id="cardEquipBomba" class="equipment-card hidden">
+          <div class="equipment-card-head"><div><span class="equipment-type">BOMBA</span><h3>Bomba da piscina</h3></div><span id="bombaCadastroStatus" class="equipment-status ok">Cadastrada</span></div>
+          <div class="equipment-single-info"><span>Marca da bomba</span><strong id="resumoBombaMarca">Não informada</strong></div>
+          <div class="equipment-actions equipment-admin hidden"><button type="button" class="btn-secondary" data-edit-equipment="bomba">Editar</button><button type="button" class="btn-danger" data-delete-equipment="bomba">Excluir</button></div>
+        </article>
+
+        <article id="cardEquipFiltro" class="equipment-card hidden">
+          <div class="equipment-card-head"><div><span class="equipment-type">FILTRO</span><h3>Filtro da piscina</h3></div><span id="filtroCadastroStatus" class="equipment-status ok">Cadastrado</span></div>
+          <div class="equipment-single-info"><span>Marca do filtro</span><strong id="resumoFiltroMarca">Não informada</strong></div>
+          <div class="equipment-actions equipment-admin hidden"><button type="button" class="btn-secondary" data-edit-equipment="filtro">Editar</button><button type="button" class="btn-danger" data-delete-equipment="filtro">Excluir</button></div>
+        </article>
+      </div>
+    </section>
+
     <section class="subcard agenda-card">
       <div class="section-title-row"><div><span class="eyebrow">AUTOMAÇÃO</span><h2>Programação da piscina</h2><p>Defina os períodos de funcionamento programado.</p></div></div>
       <form id="formAgenda"><select id="dia"><option value="0">Domingo</option><option value="1">Segunda</option><option value="2">Terça</option><option value="3">Quarta</option><option value="4">Quinta</option><option value="5">Sexta</option><option value="6">Sábado</option></select><input type="time" id="hora" required><input type="number" id="duracao" placeholder="Duração (min)" required><button type="submit">Adicionar horário</button></form>
@@ -119,6 +121,6 @@
     </section>
   </section>
 </main>
-<script src="js/agenda.js?v=20260814-9"></script>
+<script src="js/agenda.js?v=20260814-10"></script>
 </body>
 </html>
