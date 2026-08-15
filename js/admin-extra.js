@@ -19,7 +19,9 @@ function prepararAcoesClientes() {
     if (!clienteId) return;
 
     const botaoAcesso = actions.querySelector('[data-delete-user]');
-    if (botaoAcesso) botaoAcesso.textContent = 'Excluir acesso';
+    if (botaoAcesso && botaoAcesso.textContent !== 'Excluir acesso') {
+      botaoAcesso.textContent = 'Excluir acesso';
+    }
 
     if (actions.querySelector('[data-delete-client-extra]')) return;
 
@@ -75,8 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const grid = document.getElementById('clientesGrid');
   if (grid) {
-    const observer = new MutationObserver(prepararAcoesClientes);
-    observer.observe(grid, { childList: true, subtree: true });
+    const observer = new MutationObserver(() => prepararAcoesClientes());
+    observer.observe(grid, { childList: true });
   }
 
   prepararAcoesClientes();
