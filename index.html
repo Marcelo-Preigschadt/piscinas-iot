@@ -6,38 +6,41 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Controle de Piscinas</title>
-  <link rel="stylesheet" href="css/style.css?v=20260814-6">
+  <meta name="theme-color" content="#061c2a">
+  <title>Quatrin AquaControl</title>
+  <link rel="stylesheet" href="css/style.css?v=20260814-7">
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">
-      <span class="brand-mark">💧</span>
-      <div>
-        <h1>Controle de Piscinas</h1>
-        <small>Monitoramento e automação</small>
+    <a class="brand" href="index.html" aria-label="Quatrin AquaControl">
+      <span class="brand-emblem"><span>Q</span></span>
+      <div class="brand-copy">
+        <strong>Quatrin <b>AquaControl</b></strong>
+        <small>Gestão Inteligente de Piscinas</small>
       </div>
-    </div>
-    <div class="header-right">
+    </a>
+
+    <div class="topbar-actions">
+      <nav class="topnav" aria-label="Navegação principal">
+        <a id="navPiscinas" class="hidden" href="#piscinasSection">Piscinas cadastradas</a>
+        <a href="sobre.html">Sobre</a>
+      </nav>
       <div class="user-box">
         <span id="userDisplay">Usuário</span>
         <small id="perfilDisplay"></small>
       </div>
-      <button id="btnSair" class="btn-header">Sair</button>
+      <button id="btnSair" class="btn-header" type="button">Sair</button>
     </div>
   </header>
 
   <main class="dashboard-shell">
     <section class="welcome-panel">
       <div>
-        <span class="eyebrow" id="painelTipo">PAINEL</span>
-        <h2 id="painelTitulo">Suas piscinas</h2>
-        <p id="painelDescricao">Acesse sua piscina para visualizar motor, consumo, agenda e leituras da água.</p>
+        <span class="eyebrow" id="painelTipo">QUATRIN PISCINAS</span>
+        <h1 id="painelTitulo">Central de gestão</h1>
+        <p id="painelDescricao">Monitoramento, automação e gestão técnica das piscinas em um único ambiente.</p>
       </div>
-      <div class="welcome-status">
-        <span class="status-dot"></span>
-        Sistema online
-      </div>
+      <div class="welcome-status"><span class="status-dot"></span>Sistema online</div>
     </section>
 
     <section id="adminActions" class="admin-section hidden">
@@ -45,25 +48,26 @@
         <div>
           <span class="eyebrow">ADMINISTRAÇÃO</span>
           <h2>Cadastros e vínculos</h2>
+          <p class="section-note">Cadastre os dados separadamente e defina os vínculos quando a instalação estiver pronta.</p>
         </div>
       </div>
 
       <div class="action-grid">
         <button class="action-card" data-modal="modalCliente">
-          <span class="action-icon">👤</span>
+          <span class="action-icon">01</span>
           <span><strong>Novo cliente</strong><small>Cliente + acesso provisório</small></span>
         </button>
         <button class="action-card" data-modal="modalPiscina">
-          <span class="action-icon">🏊</span>
-          <span><strong>Nova piscina</strong><small>Cadastrar piscina no sistema</small></span>
+          <span class="action-icon">02</span>
+          <span><strong>Nova piscina</strong><small>Cadastrar uma nova instalação</small></span>
         </button>
         <button class="action-card" data-modal="modalVinculo">
-          <span class="action-icon">🔗</span>
-          <span><strong>Vincular cliente</strong><small>Escolher a piscina do cliente</small></span>
+          <span class="action-icon">03</span>
+          <span><strong>Vincular cliente</strong><small>Definir a piscina do cliente</small></span>
         </button>
         <button class="action-card" data-modal="modalParear">
-          <span class="action-icon">📡</span>
-          <span><strong>Vincular ESP32</strong><small>Parear controlador à piscina</small></span>
+          <span class="action-icon">04</span>
+          <span><strong>Vincular ESP32</strong><small>Parear o controlador da piscina</small></span>
         </button>
       </div>
     </section>
@@ -73,36 +77,40 @@
         <div>
           <span class="eyebrow">CLIENTES</span>
           <h2>Clientes cadastrados</h2>
-          <p class="section-note">Consulte o acesso e veja qual piscina está vinculada a cada cliente.</p>
+          <p class="section-note">Acompanhe usuário, primeiro acesso e piscina vinculada.</p>
         </div>
       </div>
       <div id="clientesGrid" class="client-grid"></div>
       <div id="emptyClientes" class="empty-state hidden">
-        <div class="empty-icon">👤</div>
+        <div class="empty-symbol">Q</div>
         <h3>Nenhum cliente cadastrado</h3>
-        <p>Use o botão “Novo cliente” para criar o primeiro acesso.</p>
+        <p>Use “Novo cliente” para criar o primeiro acesso.</p>
       </div>
     </section>
 
-    <section class="pool-section">
+    <section id="piscinasSection" class="pool-section">
       <div class="section-heading">
         <div>
           <span class="eyebrow" id="piscinasEyebrow">PISCINAS</span>
           <h2 id="piscinasTitulo">Piscinas cadastradas</h2>
-          <p id="piscinasDescricao" class="section-note">Piscinas disponíveis no sistema.</p>
+          <p id="piscinasDescricao" class="section-note">Instalações disponíveis no sistema.</p>
         </div>
-        <button id="btnAtualizar" class="btn-secondary" type="button">Atualizar</button>
+        <button id="btnAtualizar" class="btn-secondary" type="button">Atualizar dados</button>
       </div>
       <div id="piscinasGrid" class="pool-grid"></div>
       <div id="emptyPiscinas" class="empty-state hidden">
-        <div class="empty-icon">💧</div>
+        <div class="empty-symbol">Q</div>
         <h3>Nenhuma piscina disponível</h3>
         <p id="emptyPiscinasTexto">Ainda não há piscina vinculada a este acesso.</p>
       </div>
     </section>
   </main>
 
-  <!-- MODAL: CLIENTE + ACESSO PROVISÓRIO -->
+  <footer class="site-footer">
+    <strong>Quatrin Piscinas</strong>
+    <span>Quatrin AquaControl · Gestão Inteligente de Piscinas</span>
+  </footer>
+
   <div id="modalCliente" class="modal hidden" aria-hidden="true">
     <div class="modal-backdrop" data-close-modal></div>
     <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="tituloModalCliente">
@@ -120,7 +128,7 @@
           <label>Usuário de acesso<input type="text" id="clienteUsuario" placeholder="Ex.: joao.silva"></label>
           <label>Senha provisória<input type="password" id="clienteSenhaProvisoria" placeholder="Mínimo 6 caracteres"></label>
         </div>
-        <p class="form-help">No primeiro login o cliente será obrigado a criar uma nova senha. A piscina será vinculada depois pelo botão “Vincular cliente”.</p>
+        <p class="form-help">No primeiro login o cliente será obrigado a cadastrar uma nova senha. A piscina será vinculada depois.</p>
         <span id="statusCliente" class="form-status"></span>
       </div>
       <div class="modal-footer">
@@ -130,7 +138,6 @@
     </section>
   </div>
 
-  <!-- MODAL: PISCINA -->
   <div id="modalPiscina" class="modal hidden" aria-hidden="true">
     <div class="modal-backdrop" data-close-modal></div>
     <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="tituloModalPiscina">
@@ -141,7 +148,7 @@
       <div class="modal-body">
         <label>Nome da piscina<input type="text" id="nomePiscinaCadastro" placeholder="Ex.: Piscina principal"></label>
         <label>Localização<input type="text" id="localizacaoPiscinaCadastro" placeholder="Ex.: Residência - fundos"></label>
-        <p class="form-help">A piscina é cadastrada primeiro. Depois você escolhe o cliente proprietário na tela de vínculo.</p>
+        <p class="form-help">A piscina fica disponível no banco e pode ser vinculada a qualquer cliente cadastrado.</p>
         <span id="statusPiscina" class="form-status"></span>
       </div>
       <div class="modal-footer">
@@ -151,7 +158,6 @@
     </section>
   </div>
 
-  <!-- MODAL: VÍNCULO CLIENTE / PISCINA -->
   <div id="modalVinculo" class="modal hidden" aria-hidden="true">
     <div class="modal-backdrop" data-close-modal></div>
     <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="tituloModalVinculo">
@@ -162,7 +168,7 @@
       <div class="modal-body">
         <label>Cliente<select id="clienteVinculo"><option value="">Selecione o cliente</option></select></label>
         <label>Piscina<select id="piscinaVinculo"><option value="">Selecione a piscina</option></select></label>
-        <p class="form-help">Você pode escolher qualquer piscina já cadastrada no banco. Ao confirmar, o acesso do cliente será direcionado para essa piscina.</p>
+        <p class="form-help">Selecione uma piscina já existente. O usuário do cliente passará a visualizar somente essa instalação.</p>
         <span id="statusVinculo" class="form-status"></span>
       </div>
       <div class="modal-footer">
@@ -172,7 +178,6 @@
     </section>
   </div>
 
-  <!-- MODAL: ESP32 -->
   <div id="modalParear" class="modal hidden" aria-hidden="true">
     <div class="modal-backdrop" data-close-modal></div>
     <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="tituloModalParear">
@@ -193,6 +198,6 @@
     </section>
   </div>
 
-  <script src="js/app.js?v=20260814-6"></script>
+  <script src="js/app.js?v=20260814-7"></script>
 </body>
 </html>
