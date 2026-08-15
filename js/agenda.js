@@ -1,313 +1,35 @@
 const API = 'https://wqjzrbhbkienlxocykcn.supabase.co/functions/v1/piscinas-api';
+const REPORTS = 'https://wqjzrbhbkienlxocykcn.supabase.co/functions/v1/piscinas-relatorios';
 const perfil = localStorage.getItem('perfil') || 'cliente';
-
-if (localStorage.getItem('logado') !== 'true' || !localStorage.getItem('token')) {
-  sair();
-}
-
-if (localStorage.getItem('primeiro_acesso') === 'true') {
-  window.location.href = 'senha.html';
-}
-
-let piscinaSelecionada = null;
-let timerStatus = null;
-
-async function apiFetch(path, options = {}) {
-  const headers = new Headers(options.headers || {});
-  headers.set('Authorization', `Bearer ${localStorage.getItem('token') || ''}`);
-  if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
-
-  const res = await fetch(`${API}${path}`, { ...options, headers });
-  if (res.status === 401) {
-    sair();
-    throw new Error('Sessão expirada');
-  }
-  if (res.status === 428) {
-    localStorage.setItem('primeiro_acesso', 'true');
-    window.location.href = 'senha.html';
-    throw new Error('Troca de senha obrigatória');
-  }
-  return res;
-}
-
-function sair() {
-  ['token','token_expires_at','usuario','nome_usuario','cliente_id','perfil','logado','primeiro_acesso','piscina_id']
-    .forEach(k => localStorage.removeItem(k));
-  window.location.href = 'login.html';
-}
-
-function escapeHtml(v) {
-  return String(v ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
-
-async function carregarPiscinas() {
-  try {
-    const res = await apiFetch('/piscinas');
-    const piscinas = await res.json();
-    if (!res.ok) throw new Error(piscinas.erro || 'Erro ao carregar piscinas');
-
-    const container = document.getElementById('piscinasCards');
-    container.innerHTML = '';
-
-    piscinas.forEach(p => {
-      const card = document.createElement('div');
-      card.className = 'card-piscina';
-      const cliente = perfil === 'admin' && p.clientes?.nome ? `<br><small>${escapeHtml(p.clientes.nome)}</small>` : '';
-      card.innerHTML = `<strong>${escapeHtml(p.nome)}</strong><br>${escapeHtml(p.localizacao || 'Sem localização')}${cliente}`;
-      card.onclick = () => abrirAgenda(p);
-      container.appendChild(card);
-    });
-
-    const solicitado = Number(new URLSearchParams(window.location.search).get('piscina') || 0);
-    const alvo = solicitado ? piscinas.find(p => Number(p.id) === solicitado) : null;
-
-    if (alvo) {
-      abrirAgenda(alvo);
-    } else if (perfil !== 'admin' && piscinas.length === 1) {
-      abrirAgenda(piscinas[0]);
-    } else if (!piscinas.length) {
-      container.innerHTML = '<div class="sem-piscina">Nenhuma piscina vinculada a este usuário.</div>';
-    }
-  } catch (err) {
-    console.error(err);
-    alert(err.message || 'Erro ao carregar piscinas');
-  }
-}
-
-function abrirAgenda(piscina) {
-  piscinaSelecionada = { ...piscina };
-  document.getElementById('listaPiscinasAgenda').classList.add('hidden');
-  document.getElementById('agendaPiscina').classList.remove('hidden');
-  document.getElementById('nomePiscina').innerText = piscina.nome;
-
-  preencherDadosMotor(piscinaSelecionada);
-  carregarAgenda();
-  carregarPainelIoT();
-
-  if (timerStatus) clearInterval(timerStatus);
-  timerStatus = setInterval(carregarPainelIoT, 5000);
-}
-
-function voltar() {
-  if (timerStatus) clearInterval(timerStatus);
-  window.location.href = 'index.html';
-}
-
-function textoMedida(valor, unidade = '') {
-  if (valor === null || valor === undefined || valor === '') return 'Não informado';
-  return `${valor}${unidade ? ' ' + unidade : ''}`;
-}
-
-function preencherDadosMotor(p) {
-  document.getElementById('motorFabricante').value = p.motor_fabricante ?? '';
-  document.getElementById('motorModelo').value = p.motor_modelo ?? '';
-  document.getElementById('motorPotenciaCv').value = p.motor_potencia_cv ?? '';
-  document.getElementById('motorTensaoV').value = p.motor_tensao_v ?? '';
-  document.getElementById('motorCorrenteNominal').value = p.motor_corrente_nominal_a ?? '';
-  document.getElementById('motorObservacoes').value = p.motor_observacoes ?? '';
-
-  document.getElementById('resumoMotorFabricante').textContent = p.motor_fabricante || 'Não informado';
-  document.getElementById('resumoMotorModelo').textContent = p.motor_modelo || 'Não informado';
-  document.getElementById('resumoMotorPotencia').textContent = textoMedida(p.motor_potencia_cv, 'CV');
-  document.getElementById('resumoMotorTensao').textContent = textoMedida(p.motor_tensao_v, 'V');
-  document.getElementById('resumoMotorCorrente').textContent = textoMedida(p.motor_corrente_nominal_a, 'A');
-  document.getElementById('resumoMotorObservacoes').textContent = p.motor_observacoes || 'Não informado';
-}
-
-function numeroOuNull(id) {
-  const valor = document.getElementById(id).value.trim();
-  if (valor === '') return null;
-  const numero = Number(valor);
-  return Number.isFinite(numero) ? numero : null;
-}
-
-async function salvarDadosMotor() {
-  if (perfil !== 'admin' || !piscinaSelecionada) return;
-  const status = document.getElementById('statusSalvarMotor');
-  status.textContent = 'Salvando...';
-
-  const payload = {
-    motor_fabricante: document.getElementById('motorFabricante').value.trim(),
-    motor_modelo: document.getElementById('motorModelo').value.trim(),
-    motor_potencia_cv: numeroOuNull('motorPotenciaCv'),
-    motor_tensao_v: numeroOuNull('motorTensaoV'),
-    motor_corrente_nominal_a: numeroOuNull('motorCorrenteNominal'),
-    motor_observacoes: document.getElementById('motorObservacoes').value.trim()
-  };
-
-  try {
-    const res = await apiFetch(`/piscinas/${piscinaSelecionada.id}/motor`, {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.erro || 'Erro ao salvar dados do motor');
-    Object.assign(piscinaSelecionada, data);
-    preencherDadosMotor(piscinaSelecionada);
-    status.textContent = 'Dados salvos';
-    setTimeout(() => { status.textContent = ''; }, 2500);
-  } catch (err) {
-    status.textContent = err.message || 'Erro ao salvar';
-  }
-}
-
-async function carregarAgenda() {
-  if (!piscinaSelecionada) return;
-  try {
-    const res = await apiFetch(`/agenda/${piscinaSelecionada.id}`);
-    const dados = await res.json();
-    if (!res.ok) throw new Error(dados.erro || 'Erro ao carregar agenda');
-
-    const tbody = document.querySelector('#lista-agenda tbody');
-    tbody.innerHTML = '';
-
-    dados.forEach(a => {
-      tbody.innerHTML += `
-        <tr>
-          <td>${diaTexto(a.dia_semana)}</td>
-          <td>${String(a.hora_inicio).slice(0,5)}</td>
-          <td>${a.duracao_min} min</td>
-          <td><button onclick="remover(${a.id})">Excluir</button></td>
-        </tr>`;
-    });
-  } catch (err) {
-    console.error(err);
-    alert(err.message || 'Erro ao carregar agenda');
-  }
-}
-
-document.getElementById('formAgenda').addEventListener('submit', async e => {
-  e.preventDefault();
-  if (!piscinaSelecionada) return;
-
-  try {
-    const res = await apiFetch('/agenda', {
-      method: 'POST',
-      body: JSON.stringify({
-        piscina_id: piscinaSelecionada.id,
-        dia_semana: Number(document.getElementById('dia').value),
-        hora_inicio: document.getElementById('hora').value,
-        duracao_min: Number(document.getElementById('duracao').value)
-      })
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.erro || 'Erro ao adicionar horário');
-    await carregarAgenda();
-  } catch (err) {
-    alert(err.message || 'Erro ao adicionar horário');
-  }
-});
-
-async function remover(id) {
-  try {
-    const res = await apiFetch(`/agenda/${id}`, { method: 'DELETE' });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.erro || 'Erro ao excluir horário');
-    await carregarAgenda();
-  } catch (err) {
-    alert(err.message || 'Erro ao excluir horário');
-  }
-}
-
-function diaTexto(d) {
-  return ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][Number(d)];
-}
-
-function mostrarValor(id, valor, casas, unidade, aguardando = 'Aguardando leitura') {
-  const el = document.getElementById(id);
-  if (valor === null || valor === undefined || valor === '') return el.innerText = aguardando;
-  const numero = Number(valor);
-  if (!Number.isFinite(numero)) return el.innerText = aguardando;
-  el.innerText = `${numero.toFixed(casas)}${unidade ? ' ' + unidade : ''}`;
-}
-
-function limparTelemetria(texto = 'Aguardando leitura') {
-  document.getElementById('leituraCorrente').innerText = texto;
-  document.getElementById('leituraPotencia').innerText = texto;
-  document.getElementById('leituraEnergia').innerText = texto;
-  document.getElementById('leituraPh').innerText = 'Aguardando sensor';
-  document.getElementById('leituraTemperatura').innerText = 'Aguardando sensor';
-  document.getElementById('leituraOrp').innerText = 'Aguardando sensor';
-  document.getElementById('ultimaLeitura').innerText = 'Nenhuma leitura recebida';
-}
-
-function atualizarStatusMotor(status, motor) {
-  const el = document.getElementById('statusMotor');
-  el.classList.remove('ligado', 'desligado');
-  if (status === 'sem_controlador') return el.innerText = 'SEM CONTROLADOR';
-  if (status === 'offline') {
-    el.innerText = 'OFFLINE';
-    el.classList.add('desligado');
-    return;
-  }
-  const ligado = motor === 'ligado';
-  el.innerText = ligado ? 'LIGADO' : 'DESLIGADO';
-  el.classList.add(ligado ? 'ligado' : 'desligado');
-}
-
-async function carregarPainelIoT() {
-  if (!piscinaSelecionada) return;
-  try {
-    const res = await apiFetch(`/telemetria/${piscinaSelecionada.id}`);
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.erro || 'Erro ao carregar telemetria');
-
-    const deviceLine = document.getElementById('deviceStatusLine');
-    if (!data.conectado) {
-      deviceLine.innerText = 'Controlador: não vinculado';
-      atualizarStatusMotor('sem_controlador', null);
-      limparTelemetria('Sem controlador');
-      return;
-    }
-
-    deviceLine.innerText = `Controlador: ${data.device_id} • ${data.status === 'online' ? 'ONLINE' : 'OFFLINE'}`;
-    atualizarStatusMotor(data.status, data.motor);
-
-    const l = data.leitura || {};
-    mostrarValor('leituraCorrente', l.corrente_a, 2, 'A');
-    mostrarValor('leituraPotencia', l.potencia_w, 0, 'W');
-    mostrarValor('leituraEnergia', l.energia_kwh, 3, 'kWh');
-    mostrarValor('leituraPh', l.ph, 2, '', 'Aguardando sensor');
-    mostrarValor('leituraTemperatura', l.temperatura_c, 1, '°C', 'Aguardando sensor');
-    mostrarValor('leituraOrp', l.orp_mv, 0, 'mV', 'Aguardando sensor');
-
-    document.getElementById('ultimaLeitura').innerText = l.ultima_leitura
-      ? `Última leitura: ${new Date(l.ultima_leitura).toLocaleString('pt-BR')}`
-      : 'Nenhuma leitura recebida';
-  } catch (err) {
-    console.error(err);
-    document.getElementById('deviceStatusLine').innerText = 'Controlador: erro de comunicação';
-  }
-}
-
-async function enviarComando(acao) {
-  if (!piscinaSelecionada) return alert('Selecione uma piscina primeiro');
-  const el = document.getElementById('statusMotor');
-
-  try {
-    const res = await apiFetch(`/motor/${piscinaSelecionada.id}/${acao}`, { method: 'POST' });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.erro || `Falha ao ${acao} o motor`);
-    el.innerText = data.dispositivo === 'offline' ? 'COMANDO PENDENTE / OFFLINE' : 'AGUARDANDO ESP32...';
-    setTimeout(carregarPainelIoT, 5500);
-  } catch (err) {
-    alert(err.message || 'Erro na comunicação com o servidor');
-  }
-}
-
-function ligarMotor() { return enviarComando('ligar'); }
-function desligarMotor() { return enviarComando('desligar'); }
-
-if (perfil === 'admin') {
-  document.getElementById('dadosMotorEditor').classList.remove('hidden');
-  document.getElementById('btnSalvarMotor').addEventListener('click', salvarDadosMotor);
-} else {
-  document.getElementById('dadosMotorResumo').classList.remove('hidden');
-}
-
-carregarPiscinas();
+if (localStorage.getItem('logado') !== 'true' || !localStorage.getItem('token')) sair();
+if (localStorage.getItem('primeiro_acesso') === 'true') window.location.href = 'senha.html';
+let piscinaSelecionada=null,timerStatus=null,timerConsumo=null,consumoBase=null,consumoBaseRecebidoEm=0;
+async function fetchAuth(base,path,options={}){const headers=new Headers(options.headers||{});headers.set('Authorization',`Bearer ${localStorage.getItem('token')||''}`);if(options.body&&!headers.has('Content-Type'))headers.set('Content-Type','application/json');const res=await fetch(`${base}${path}`,{...options,headers});if(res.status===401){sair();throw new Error('Sessão expirada');}if(res.status===428){localStorage.setItem('primeiro_acesso','true');window.location.href='senha.html';throw new Error('Troca de senha obrigatória');}return res;}
+const apiFetch=(path,options={})=>fetchAuth(API,path,options),reportsFetch=(path,options={})=>fetchAuth(REPORTS,path,options);
+function sair(){['token','token_expires_at','usuario','nome_usuario','cliente_id','perfil','logado','primeiro_acesso','piscina_id'].forEach(k=>localStorage.removeItem(k));window.location.href='login.html';}
+function voltar(){if(timerStatus)clearInterval(timerStatus);if(timerConsumo)clearInterval(timerConsumo);window.location.href='index.html';}
+function escapeHtml(v){return String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');}
+function numeroOuNull(id){const v=document.getElementById(id).value.trim();if(v==='')return null;const n=Number(v);return Number.isFinite(n)?n:null;}
+function textoMedida(v,u=''){return v===null||v===undefined||v===''?'Não informado':`${v}${u?' '+u:''}`;}
+async function carregarPiscinas(){try{const res=await apiFetch('/piscinas');const piscinas=await res.json();if(!res.ok)throw new Error(piscinas.erro||'Erro ao carregar piscinas');const container=document.getElementById('piscinasCards');container.innerHTML='';piscinas.forEach(p=>{const card=document.createElement('div');card.className='card-piscina';const cliente=perfil==='admin'&&p.clientes?.nome?`<br><small>${escapeHtml(p.clientes.nome)}</small>`:'';card.innerHTML=`<strong>${escapeHtml(p.nome)}</strong><br>${escapeHtml(p.localizacao||'Sem localização')}${cliente}`;card.onclick=()=>abrirAgenda(p);container.appendChild(card);});const solicitado=Number(new URLSearchParams(location.search).get('piscina')||0);const alvo=solicitado?piscinas.find(p=>Number(p.id)===solicitado):null;if(alvo)abrirAgenda(alvo);else if(perfil!=='admin'&&piscinas.length===1)abrirAgenda(piscinas[0]);else if(!piscinas.length)container.innerHTML='<div class="sem-piscina">Nenhuma piscina vinculada a este usuário.</div>';}catch(err){console.error(err);alert(err.message||'Erro ao carregar piscinas');}}
+async function abrirAgenda(piscina){piscinaSelecionada={...piscina};document.getElementById('listaPiscinasAgenda').classList.add('hidden');document.getElementById('agendaPiscina').classList.remove('hidden');document.getElementById('nomePiscina').textContent=piscina.nome;await carregarConfigMotor();await Promise.all([carregarAgenda(),carregarPainelIoT(),carregarConsumo()]);if(timerStatus)clearInterval(timerStatus);timerStatus=setInterval(()=>{carregarPainelIoT();carregarConsumo();},5000);if(timerConsumo)clearInterval(timerConsumo);timerConsumo=setInterval(renderizarConsumoTempoReal,1000);}
+function preencherDadosMotor(p){document.getElementById('motorFabricante').value=p.motor_fabricante??'';document.getElementById('motorModelo').value=p.motor_modelo??'';document.getElementById('motorPotenciaCv').value=p.motor_potencia_cv??'';document.getElementById('motorPotenciaW').value=p.motor_potencia_eletrica_w??'';document.getElementById('motorTensaoV').value=p.motor_tensao_v??'';document.getElementById('motorCorrenteNominal').value=p.motor_corrente_nominal_a??'';document.getElementById('tarifaKwh').value=p.tarifa_kwh??'';document.getElementById('motorObservacoes').value=p.motor_observacoes??'';document.getElementById('resumoMotorFabricante').textContent=p.motor_fabricante||'Não informado';document.getElementById('resumoMotorModelo').textContent=p.motor_modelo||'Não informado';document.getElementById('resumoMotorPotencia').textContent=textoMedida(p.motor_potencia_cv,'CV');document.getElementById('resumoMotorPotenciaW').textContent=textoMedida(p.motor_potencia_eletrica_w,'W');document.getElementById('resumoMotorTensao').textContent=textoMedida(p.motor_tensao_v,'V');document.getElementById('resumoMotorCorrente').textContent=textoMedida(p.motor_corrente_nominal_a,'A');document.getElementById('resumoTarifa').textContent=p.tarifa_kwh!==null&&p.tarifa_kwh!==undefined?`R$ ${Number(p.tarifa_kwh).toFixed(4).replace('.',',')} / kWh`:'Não informada';document.getElementById('resumoMotorObservacoes').textContent=p.motor_observacoes||'Não informado';}
+async function carregarConfigMotor(){if(!piscinaSelecionada)return;try{const res=await reportsFetch(`/motor/${piscinaSelecionada.id}/config`);const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.erro||'Erro ao carregar dados do motor');Object.assign(piscinaSelecionada,data);preencherDadosMotor(piscinaSelecionada);}catch(err){console.error(err);preencherDadosMotor(piscinaSelecionada);}}
+async function salvarDadosMotor(){if(perfil!=='admin'||!piscinaSelecionada)return;const status=document.getElementById('statusSalvarMotor');status.textContent='Salvando...';const payload={motor_fabricante:document.getElementById('motorFabricante').value.trim(),motor_modelo:document.getElementById('motorModelo').value.trim(),motor_potencia_cv:numeroOuNull('motorPotenciaCv'),motor_potencia_eletrica_w:numeroOuNull('motorPotenciaW'),motor_tensao_v:numeroOuNull('motorTensaoV'),motor_corrente_nominal_a:numeroOuNull('motorCorrenteNominal'),tarifa_kwh:numeroOuNull('tarifaKwh'),motor_observacoes:document.getElementById('motorObservacoes').value.trim()};try{const res=await reportsFetch(`/motor/${piscinaSelecionada.id}/config`,{method:'POST',body:JSON.stringify(payload)});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.erro||'Erro ao salvar dados do motor');Object.assign(piscinaSelecionada,data);preencherDadosMotor(piscinaSelecionada);await carregarConsumo();status.textContent='Dados salvos';setTimeout(()=>status.textContent='',2500);}catch(err){status.textContent=err.message||'Erro ao salvar';}}
+function formatarTempo(seg){seg=Math.max(0,Math.floor(Number(seg)||0));const d=Math.floor(seg/86400);seg%=86400;const h=Math.floor(seg/3600);seg%=3600;const m=Math.floor(seg/60),s=seg%60;if(d>0)return`${d}d ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m`;return`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;}
+function formatKwh(v){return`${Number(v||0).toFixed(3).replace('.',',')} kWh`;}
+function formatBRL(v){return Number.isFinite(Number(v))?Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'Tarifa não cadastrada';}
+async function carregarConsumo(){if(!piscinaSelecionada)return;try{const res=await reportsFetch(`/consumo/${piscinaSelecionada.id}/resumo`);const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.erro||'Erro ao calcular consumo');consumoBase=data;consumoBaseRecebidoEm=Date.now();renderizarConsumoTempoReal();}catch(err){console.error(err);document.getElementById('consumoLive').textContent='Indisponível';}}
+function renderizarConsumoTempoReal(){if(!consumoBase)return;const extra=consumoBase.motor_ligado?Math.max(0,(Date.now()-consumoBaseRecebidoEm)/1000):0;const kw=Number(consumoBase.potencia_kw||0),sess=Number(consumoBase.tempo_sessao_segundos||0)+extra,hoje=Number(consumoBase.tempo_hoje_segundos||0)+extra,mes=Number(consumoBase.tempo_mes_segundos||0)+extra;document.getElementById('consumoPotencia').textContent=kw>0?`${kw.toFixed(3).replace('.',',')} kW`:'Cadastre a potência';document.getElementById('consumoSessao').textContent=formatKwh(kw*sess/3600);document.getElementById('tempoSessao').textContent=formatarTempo(sess);document.getElementById('consumoHoje').textContent=formatKwh(kw*hoje/3600);document.getElementById('tempoHoje').textContent=`${formatarTempo(hoje)} ligado`;document.getElementById('consumoMes').textContent=formatKwh(kw*mes/3600);document.getElementById('tempoMes').textContent=`${formatarTempo(mes)} ligado`;const tarifa=consumoBase.tarifa_kwh===null||consumoBase.tarifa_kwh===undefined?null:Number(consumoBase.tarifa_kwh);document.getElementById('consumoCustoMes').textContent=tarifa===null?'Tarifa não cadastrada':formatBRL(kw*mes/3600*tarifa);const live=document.getElementById('consumoLive');live.textContent=consumoBase.motor_ligado?'Calculando ao vivo':'Motor parado';live.classList.toggle('on',!!consumoBase.motor_ligado);}
+function abrirGastosMensais(){if(piscinaSelecionada)window.location.href=`gastos.html?piscina=${encodeURIComponent(piscinaSelecionada.id)}`;}
+async function carregarAgenda(){if(!piscinaSelecionada)return;try{const res=await apiFetch(`/agenda/${piscinaSelecionada.id}`);const dados=await res.json();if(!res.ok)throw new Error(dados.erro||'Erro ao carregar agenda');const tbody=document.querySelector('#lista-agenda tbody');tbody.innerHTML='';dados.forEach(a=>tbody.innerHTML+=`<tr><td>${diaTexto(a.dia_semana)}</td><td>${String(a.hora_inicio).slice(0,5)}</td><td>${a.duracao_min} min</td><td><button onclick="remover(${a.id})">Excluir</button></td></tr>`);}catch(err){alert(err.message||'Erro ao carregar agenda');}}
+document.getElementById('formAgenda').addEventListener('submit',async e=>{e.preventDefault();if(!piscinaSelecionada)return;try{const res=await apiFetch('/agenda',{method:'POST',body:JSON.stringify({piscina_id:piscinaSelecionada.id,dia_semana:Number(document.getElementById('dia').value),hora_inicio:document.getElementById('hora').value,duracao_min:Number(document.getElementById('duracao').value)})});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.erro||'Erro ao adicionar horário');await carregarAgenda();}catch(err){alert(err.message||'Erro ao adicionar horário');}});
+async function remover(id){try{const res=await apiFetch(`/agenda/${id}`,{method:'DELETE'});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.erro||'Erro ao excluir horário');await carregarAgenda();}catch(err){alert(err.message||'Erro ao excluir horário');}}
+function diaTexto(d){return['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][Number(d)];}
+function mostrarValor(id,valor,casas,unidade,aguardando='Aguardando sensor'){const el=document.getElementById(id);if(valor===null||valor===undefined||valor===''){el.textContent=aguardando;return;}const n=Number(valor);el.textContent=Number.isFinite(n)?`${n.toFixed(casas).replace('.',',')}${unidade?' '+unidade:''}`:aguardando;}
+function atualizarStatusMotor(status,motor){const el=document.getElementById('statusMotor');el.classList.remove('ligado','desligado');if(status==='sem_controlador'){el.textContent='SEM CONTROLADOR';return;}if(status==='offline'){el.textContent='OFFLINE';el.classList.add('desligado');return;}const ligado=motor==='ligado';el.textContent=ligado?'LIGADO':'DESLIGADO';el.classList.add(ligado?'ligado':'desligado');}
+async function carregarPainelIoT(){if(!piscinaSelecionada)return;try{const res=await apiFetch(`/telemetria/${piscinaSelecionada.id}`);const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.erro||'Erro ao carregar telemetria');const line=document.getElementById('deviceStatusLine');if(!data.conectado){line.textContent='Controlador: não vinculado';atualizarStatusMotor('sem_controlador');document.getElementById('leituraPh').textContent='Aguardando sensor';document.getElementById('leituraTemperatura').textContent='Aguardando sensor';document.getElementById('leituraOrp').textContent='Aguardando sensor';return;}line.textContent=`Controlador: ${data.device_id} • ${data.status==='online'?'ONLINE':'OFFLINE'}`;atualizarStatusMotor(data.status,data.motor);const l=data.leitura||{};mostrarValor('leituraPh',l.ph,2,'');mostrarValor('leituraTemperatura',l.temperatura_c,1,'°C');mostrarValor('leituraOrp',l.orp_mv,0,'mV');document.getElementById('ultimaLeitura').textContent=l.ultima_leitura?`Última leitura: ${new Date(l.ultima_leitura).toLocaleString('pt-BR')}`:'Nenhuma leitura recebida';}catch(err){console.error(err);document.getElementById('deviceStatusLine').textContent='Controlador: erro de comunicação';}}
+async function enviarComando(acao){if(!piscinaSelecionada)return;const el=document.getElementById('statusMotor');try{const res=await apiFetch(`/motor/${piscinaSelecionada.id}/${acao}`,{method:'POST'});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.erro||`Falha ao ${acao} o motor`);el.textContent=data.dispositivo==='offline'?'COMANDO PENDENTE / OFFLINE':'AGUARDANDO ESP32...';setTimeout(()=>{carregarPainelIoT();carregarConsumo();},5500);}catch(err){alert(err.message||'Erro na comunicação com o servidor');}}
+function ligarMotor(){return enviarComando('ligar')}function desligarMotor(){return enviarComando('desligar')}
+if(perfil==='admin'){document.getElementById('dadosMotorEditor').classList.remove('hidden');document.getElementById('btnSalvarMotor').addEventListener('click',salvarDadosMotor);}else document.getElementById('dadosMotorResumo').classList.remove('hidden');
+document.getElementById('btnGastosMensais').addEventListener('click',abrirGastosMensais);carregarPiscinas();
