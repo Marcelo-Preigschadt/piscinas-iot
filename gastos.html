@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#061c2a">
+  <title>Gastos mensais | Quatrin AquaControl</title>
+  <link rel="stylesheet" href="css/gastos.css?v=20260814-7">
+</head>
+<body>
+<header class="appbar">
+  <a class="brand" href="index.html"><span class="qmark">Q</span><span><strong>Quatrin AquaControl</strong><small>Gestão Inteligente de Piscinas</small></span></a>
+  <nav><button id="btnVoltar" type="button">Voltar à piscina</button><a href="sobre.html">Sobre</a></nav>
+</header>
+<main class="report-shell">
+  <section class="hero">
+    <div><span class="eyebrow">ENERGIA</span><h1>Gastos mensais do motor</h1><p id="piscinaNome">Carregando piscina...</p></div>
+    <label class="year-control">Ano<select id="ano"></select></label>
+  </section>
+  <section class="annual-summary">
+    <div><span>Consumo no ano</span><strong id="totalKwh">0,000 kWh</strong></div>
+    <div><span>Tempo ligado</span><strong id="totalTempo">00:00:00</strong></div>
+    <div><span>Custo estimado</span><strong id="totalCusto">Tarifa não cadastrada</strong></div>
+    <div><span>Potência de referência</span><strong id="potenciaRef">Não configurada</strong></div>
+  </section>
+  <section class="months-panel">
+    <div class="section-heading"><div><span class="eyebrow">HISTÓRICO</span><h2>Selecione o mês</h2><p>Clique em um mês para visualizar o consumo e o custo estimado.</p></div></div>
+    <div id="mesesGrid" class="months-grid"></div>
+  </section>
+  <section id="monthDetail" class="detail-panel hidden">
+    <div><span class="eyebrow">DETALHAMENTO</span><h2 id="mesTitulo">Mês</h2></div>
+    <div class="detail-grid">
+      <div><span>Tempo de funcionamento</span><strong id="mesTempo">00:00:00</strong></div>
+      <div><span>Consumo estimado</span><strong id="mesKwh">0,000 kWh</strong></div>
+      <div><span>Tarifa cadastrada</span><strong id="mesTarifa">Não cadastrada</strong></div>
+      <div><span>Custo estimado</span><strong id="mesCusto">Não disponível</strong></div>
+    </div>
+    <p class="calculation-note">Cálculo: potência elétrica cadastrada × horas reais de funcionamento. Quando a potência elétrica em W não estiver informada, o sistema utiliza a conversão da potência em CV.</p>
+  </section>
+</main>
+<script src="js/gastos.js?v=20260814-7"></script>
+</body>
+</html>
