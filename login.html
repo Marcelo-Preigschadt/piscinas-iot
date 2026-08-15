@@ -6,36 +6,23 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Login | Sistema de Piscinas</title>
-  <link rel="stylesheet" href="css/login.css?v=20260814-6">
+  <meta name="theme-color" content="#061c2a">
+  <title>Login | Quatrin AquaControl</title>
+  <link rel="stylesheet" href="css/login.css?v=20260814-7">
 </head>
 <body>
   <main class="auth-card">
     <div class="auth-brand">
-      <span class="auth-icon">💧</span>
-      <div>
-        <h1>Controle de Piscinas</h1>
-        <p>Monitoramento e automação</p>
-      </div>
+      <span class="auth-icon">Q</span>
+      <div><h1>Quatrin AquaControl</h1><p>Gestão Inteligente de Piscinas</p></div>
     </div>
-
-    <div class="auth-heading">
-      <h2>Acesso ao sistema</h2>
-      <p>Entre com o usuário e a senha fornecidos pelo administrador.</p>
-    </div>
-
-    <label>Usuário
-      <input type="text" id="usuario" autocomplete="username" placeholder="Seu usuário">
-    </label>
-
-    <label>Senha
-      <input type="password" id="senha" autocomplete="current-password" placeholder="Sua senha">
-    </label>
-
-    <button id="btnEntrar" type="button" onclick="login()">Entrar</button>
+    <div class="auth-heading"><span class="auth-kicker">QUATRIN PISCINAS</span><h2>Acesso ao sistema</h2><p>Entre com as credenciais fornecidas para acessar sua instalação.</p></div>
+    <label>Usuário<input type="text" id="usuario" autocomplete="username" placeholder="Seu usuário"></label>
+    <label>Senha<input type="password" id="senha" autocomplete="current-password" placeholder="Sua senha"></label>
+    <button id="btnEntrar" type="button" onclick="login()">Entrar no AquaControl</button>
     <span id="erro"></span>
+    <a class="about-login" href="sobre.html">Sobre o sistema</a>
   </main>
-
-  <script src="js/login.js?v=20260814-6"></script>
+  <script src="js/login.js?v=20260814-7"></script>
 </body>
 </html>
