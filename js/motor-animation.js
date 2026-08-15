@@ -1,12 +1,37 @@
 (() => {
-  const visual = document.getElementById('motorVisual');
   const statusEl = document.getElementById('statusMotor');
-  const stateEl = document.getElementById('motorVisualState');
-  const hintEl = document.getElementById('motorVisualHint');
+  const botoes = document.querySelector('.motor-buttons');
   const btnLigar = document.querySelector('.motor-buttons .ligar');
   const btnDesligar = document.querySelector('.motor-buttons .desligar');
-  if (!visual || !statusEl || !stateEl || !hintEl) return;
+  if (!statusEl || !botoes) return;
 
+  let visual = document.getElementById('motorVisual');
+  if (!visual) {
+    visual = document.createElement('div');
+    visual.id = 'motorVisual';
+    visual.className = 'motor-visual is-stopped';
+    visual.innerHTML = `
+      <div class="motor-visual-head">
+        <span class="motor-visual-label">Motor da filtragem</span>
+        <strong id="motorVisualState" class="motor-visual-state">Motor parado</strong>
+      </div>
+      <div class="motor-stage" aria-hidden="true">
+        <span class="motor-pulse"></span>
+        <div class="motor-machine">
+          <div class="motor-terminal"></div>
+          <div class="motor-body"></div>
+          <div class="motor-cap"></div>
+          <div class="motor-rotor"><span class="motor-rotor-center"></span></div>
+          <div class="motor-shaft"></div>
+          <div class="motor-base"></div>
+        </div>
+      </div>
+      <div id="motorVisualHint" class="motor-visual-hint">Pronto para acionamento</div>`;
+    botoes.insertAdjacentElement('afterend', visual);
+  }
+
+  const stateEl = document.getElementById('motorVisualState');
+  const hintEl = document.getElementById('motorVisualHint');
   let pendingAction = null;
 
   function aplicarEstado(estado) {
