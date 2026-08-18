@@ -72,7 +72,7 @@
         </button>
         <button class="action-card" data-modal="modalParear">
           <span class="action-icon">04</span>
-          <span><strong>Vincular ESP32</strong><small>Parear o controlador da piscina</small></span>
+          <span><strong>Vincular ESP32</strong><small>Selecionar controlador detectado</small></span>
         </button>
       </div>
     </section>
@@ -192,8 +192,9 @@
       </div>
       <div class="modal-body">
         <label>Piscina<select id="piscinaPareamento"><option value="">Selecione a piscina</option></select></label>
-        <label>Código de pareamento<input type="text" id="codigoPareamento" inputmode="numeric" maxlength="6" placeholder="6 dígitos"></label>
-        <p class="form-help">Use o código exibido pelo controlador durante a instalação.</p>
+        <label>Controlador detectado<select id="dispositivoPareamento"><option value="">Buscando controladores...</option></select></label>
+        <p class="form-help">Depois que o ESP32 é conectado ao Wi-Fi do local, ele se registra automaticamente no AquaControl e aparece nesta lista. Não é necessário abrir o Arduino IDE nem digitar código de pareamento.</p>
+        <button type="button" class="btn-secondary" id="btnAtualizarDispositivos">Atualizar controladores</button>
         <span id="statusPareamento" class="form-status"></span>
       </div>
       <div class="modal-footer">
@@ -203,7 +204,7 @@
     </section>
   </div>
 
-  <script src="js/app.js?v=20260814-11"></script>
+  <script src="js/app.js?v=20260818-1"></script>
   <script src="js/admin-access.js?v=20260814-12"></script>
 </body>
 </html>
