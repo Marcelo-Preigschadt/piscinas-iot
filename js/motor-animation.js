@@ -45,6 +45,10 @@
     ? window.carregarPainelIoT
     : null;
 
+  function piscinaAtual() {
+    try { return piscinaSelecionada || null; } catch (_) { return null; }
+  }
+
   function aplicarEstado(estado) {
     visual.classList.remove(
       'is-stopped',
@@ -132,8 +136,9 @@
   }
 
   async function consultarControle() {
-    if (!window.piscinaSelecionada) return null;
-    const res = await controlFetch(`/motor/${window.piscinaSelecionada.id}/status`);
+    const piscina = piscinaAtual();
+    if (!piscina) return null;
+    const res = await controlFetch(`/motor/${piscina.id}/status`);
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.erro || 'Erro ao consultar o controlador');
     renderizarControle(data);
@@ -187,7 +192,8 @@
   }
 
   window.enviarComando = async function enviarComandoV2(acao) {
-    if (!window.piscinaSelecionada || envioEmCurso) return;
+    const piscina = piscinaAtual();
+    if (!piscina || envioEmCurso) return;
     envioEmCurso = true;
 
     pendingAction = acao;
@@ -196,7 +202,7 @@
     aplicarEstado(acao === 'desligar' ? 'stopping' : 'starting');
 
     try {
-      const res = await controlFetch(`/motor/${window.piscinaSelecionada.id}/${acao}`, { method: 'POST' });
+      const res = await controlFetch(`/motor/${piscina.id}/${acao}`, { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.erro || `Falha ao ${acao} o motor`);
 
