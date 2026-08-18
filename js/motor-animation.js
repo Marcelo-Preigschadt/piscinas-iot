@@ -34,6 +34,8 @@
   const stateEl = document.getElementById('motorVisualState');
   const hintEl = document.getElementById('motorVisualHint');
   let pendingAction = null;
+  let fastPollTimer = null;
+  let fastPollStartedAt = 0;
 
   function aplicarEstado(estado) {
     visual.classList.remove(
@@ -60,10 +62,41 @@
     hintEl.textContent = textos[estado][1];
   }
 
+  function pararConsultaRapida() {
+    if (fastPollTimer) {
+      clearInterval(fastPollTimer);
+      fastPollTimer = null;
+    }
+  }
+
+  function iniciarConsultaRapida(acao) {
+    pararConsultaRapida();
+    fastPollStartedAt = Date.now();
+
+    // Consulta o banco rapidamente logo após o comando, em vez de esperar
+    // o ciclo normal de 5 segundos da tela.
+    fastPollTimer = setInterval(async () => {
+      try {
+        if (typeof carregarPainelIoT === 'function') await carregarPainelIoT();
+        if (typeof carregarConsumo === 'function') carregarConsumo();
+      } catch (_) {}
+
+      const texto = (statusEl.textContent || '').trim().toUpperCase();
+      const confirmado =
+        (acao === 'ligar' && texto === 'LIGADO') ||
+        (acao === 'desligar' && texto === 'DESLIGADO');
+
+      if (confirmado || Date.now() - fastPollStartedAt > 6500) {
+        pararConsultaRapida();
+      }
+    }, 350);
+  }
+
   function sincronizar() {
     const texto = (statusEl.textContent || '').trim().toUpperCase();
 
     if (texto.includes('SEM CONTROLADOR')) {
+      pararConsultaRapida();
       return aplicarEstado('disconnected');
     }
 
@@ -73,15 +106,18 @@
 
     if (texto === 'LIGADO') {
       pendingAction = null;
+      pararConsultaRapida();
       return aplicarEstado('running');
     }
 
     if (texto === 'DESLIGADO') {
       pendingAction = null;
+      pararConsultaRapida();
       return aplicarEstado('stopped');
     }
 
     if (texto.includes('OFFLINE')) {
+      pararConsultaRapida();
       return aplicarEstado('offline');
     }
   }
@@ -89,11 +125,13 @@
   btnLigar?.addEventListener('click', () => {
     pendingAction = 'ligar';
     aplicarEstado('starting');
+    iniciarConsultaRapida('ligar');
   });
 
   btnDesligar?.addEventListener('click', () => {
     pendingAction = 'desligar';
     aplicarEstado('stopping');
+    iniciarConsultaRapida('desligar');
   });
 
   const observer = new MutationObserver(sincronizar);
