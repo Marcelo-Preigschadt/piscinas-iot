@@ -69,7 +69,7 @@
       running: ['Bomba em funcionamento', 'Retorno do motor confirmado pelo GPIO 27'],
       starting: ['Acionando bomba…', 'Aguardando confirmação física pelo GPIO 27'],
       stopping: ['Desligando bomba…', 'Aguardando confirmação física pelo GPIO 27'],
-      offline: ['Controlador offline', 'Comando permanece pendente até o ESP32 reconectar'],
+      offline: ['Controlador offline', 'Sem comunicação com o AquaControl'],
       disconnected: ['Sem controlador', 'Vincule um ESP32 para controlar a bomba']
     };
 
@@ -94,9 +94,21 @@
   function atualizarLinhaControlador(data) {
     if (!deviceLine || !data) return;
     const id = data.device_id || 'controlador';
-    const status = data.status === 'online' ? 'ONLINE' : 'OFFLINE';
-    const wifi = data.wifi_ssid ? ` • Wi-Fi: ${data.wifi_ssid}` : ' • Wi-Fi: não informado';
-    deviceLine.textContent = `Controlador: ${id} • ${status}${wifi}`;
+
+    if (data.status === 'online') {
+      const rede = data.wifi_ssid ? ` • Wi-Fi: ${data.wifi_ssid}` : '';
+      const sinal = Number.isFinite(Number(data.wifi_rssi)) ? ` • ${Number(data.wifi_rssi)} dBm` : '';
+      deviceLine.textContent = `Controlador: ${id} • ONLINE${rede}${sinal}`;
+      return;
+    }
+
+    const ultimaRede = data.ultima_rede_conhecida
+      ? ` • Última rede conhecida: ${data.ultima_rede_conhecida}`
+      : '';
+    const tempo = Number.isFinite(Number(data.segundos_sem_ping))
+      ? ` • sem comunicação há ${Number(data.segundos_sem_ping)} s`
+      : '';
+    deviceLine.textContent = `Controlador: ${id} • OFFLINE${ultimaRede}${tempo}`;
   }
 
   async function controlFetch(path, options = {}) {
@@ -259,7 +271,7 @@
     monitorContinuoTimer = setInterval(() => {
       if (document.visibilityState !== 'visible') return;
       consultarControle().catch(() => {});
-    }, 1000);
+    }, 3000);
   }
 
   window.enviarComando = async function enviarComandoV2(acao) {
