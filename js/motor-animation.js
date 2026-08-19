@@ -1,6 +1,7 @@
 (() => {
   const CONTROL = 'https://wqjzrbhbkienlxocykcn.supabase.co/functions/v1/piscinas-control';
   const statusEl = document.getElementById('statusMotor');
+  const deviceLine = document.getElementById('deviceStatusLine');
   const botoes = document.querySelector('.motor-buttons');
   const btnLigar = document.querySelector('.motor-buttons .ligar');
   const btnDesligar = document.querySelector('.motor-buttons .desligar');
@@ -63,15 +64,37 @@
 
     const textos = {
       stopped: ['Motor parado', 'Pronto para acionamento'],
-      running: ['Bomba em funcionamento', 'Rotor ativo · consumo sendo calculado'],
-      starting: ['Acionando bomba…', 'Aguardando confirmação do ESP32'],
-      stopping: ['Desligando bomba…', 'Aguardando confirmação do ESP32'],
+      running: ['Bomba em funcionamento', 'Retorno do motor confirmado pelo GPIO 27'],
+      starting: ['Acionando bomba…', 'Aguardando confirmação física pelo GPIO 27'],
+      stopping: ['Desligando bomba…', 'Aguardando confirmação física pelo GPIO 27'],
       offline: ['Controlador offline', 'Comando permanece pendente até o ESP32 reconectar'],
       disconnected: ['Sem controlador', 'Vincule um ESP32 para controlar a bomba']
     };
 
     stateEl.textContent = textos[estado][0];
     hintEl.textContent = textos[estado][1];
+  }
+
+  function aplicarFalhaRetorno(data) {
+    visual.classList.remove('is-running', 'is-starting', 'is-stopping', 'is-offline', 'is-disconnected');
+    visual.classList.add('is-stopped');
+    visual.dataset.state = 'fault';
+
+    if (data?.rele === 'ligado' && data?.motor !== 'ligado') {
+      stateEl.textContent = 'Motor sem retorno';
+      hintEl.textContent = 'Relé ligado, mas o GPIO 27 não confirma funcionamento';
+    } else {
+      stateEl.textContent = 'Retorno incompatível';
+      hintEl.textContent = 'GPIO 27 indica motor ativo com o relé desligado';
+    }
+  }
+
+  function atualizarLinhaControlador(data) {
+    if (!deviceLine || !data) return;
+    const id = data.device_id || 'controlador';
+    const status = data.status === 'online' ? 'ONLINE' : 'OFFLINE';
+    const wifi = data.wifi_ssid ? ` • Wi-Fi: ${data.wifi_ssid}` : ' • Wi-Fi: não informado';
+    deviceLine.textContent = `Controlador: ${id} • ${status}${wifi}`;
   }
 
   async function controlFetch(path, options = {}) {
@@ -99,8 +122,16 @@
       (acao === 'desligar' && motor === 'desligado');
   }
 
+  function idadeComandoMs(data) {
+    if (!data?.comando_criado_em) return 0;
+    const t = new Date(data.comando_criado_em).getTime();
+    return Number.isFinite(t) ? Math.max(0, Date.now() - t) : 0;
+  }
+
   function renderizarControle(data) {
     if (!data) return false;
+
+    atualizarLinhaControlador(data);
 
     if (data.status === 'offline') {
       statusEl.textContent = data.pendente ? 'COMANDO PENDENTE / OFFLINE' : 'OFFLINE';
@@ -110,13 +141,42 @@
       return false;
     }
 
+    const retornoIncompativel =
+      (data.rele === 'ligado' || data.rele === 'desligado') &&
+      (data.motor === 'ligado' || data.motor === 'desligado') &&
+      data.rele !== data.motor;
+
     if (data.pendente) {
       const acao = data.comando || pendingAction;
       pendingAction = acao;
       pendingSeq = Number(data.comando_seq || pendingSeq || 0);
-      statusEl.textContent = 'AGUARDANDO ESP32...';
-      statusEl.classList.remove('ligado', 'desligado');
-      aplicarEstado(acao === 'desligar' ? 'stopping' : 'starting');
+
+      const falhaDeRetorno = retornoIncompativel && idadeComandoMs(data) >= 3000;
+      if (falhaDeRetorno) {
+        statusEl.textContent = data.rele === 'ligado'
+          ? 'MOTOR DESLIGADO / RELÉ LIGADO'
+          : 'RETORNO ATIVO / RELÉ DESLIGADO';
+        statusEl.classList.remove('ligado');
+        statusEl.classList.add('desligado');
+        aplicarFalhaRetorno(data);
+      } else {
+        statusEl.textContent = 'AGUARDANDO RETORNO DO MOTOR...';
+        statusEl.classList.remove('ligado', 'desligado');
+        aplicarEstado(acao === 'desligar' ? 'stopping' : 'starting');
+      }
+      return false;
+    }
+
+    if (retornoIncompativel) {
+      pendingAction = null;
+      pendingSeq = 0;
+      pararConsultaRapida();
+      statusEl.textContent = data.rele === 'ligado'
+        ? 'MOTOR DESLIGADO / RELÉ LIGADO'
+        : 'RETORNO ATIVO / RELÉ DESLIGADO';
+      statusEl.classList.remove('ligado');
+      statusEl.classList.add('desligado');
+      aplicarFalhaRetorno(data);
       return false;
     }
 
@@ -131,6 +191,7 @@
       pendingAction = null;
       pendingSeq = 0;
       pararConsultaRapida();
+      if (typeof window.carregarConsumo === 'function') window.carregarConsumo();
     }
     return confirmou;
   }
@@ -154,7 +215,7 @@
     } catch (err) {
       console.error('Controle do motor:', err);
       if (pendingAction) {
-        statusEl.textContent = 'AGUARDANDO ESP32...';
+        statusEl.textContent = 'AGUARDANDO RETORNO DO MOTOR...';
         aplicarEstado(pendingAction === 'desligar' ? 'stopping' : 'starting');
       }
     }
@@ -176,19 +237,14 @@
         }
       } catch (_) {}
 
-      if (Date.now() - fastPollStartedAt >= 12000) {
+      if (Date.now() - fastPollStartedAt >= 15000) {
         pararConsultaRapida();
-        try {
-          const data = await consultarControle();
-          if (data?.status === 'online' && data?.pendente) {
-            statusEl.textContent = 'AGUARDANDO ESP32...';
-          }
-        } catch (_) {}
+        try { await consultarControle(); } catch (_) {}
       }
     };
 
     executar();
-    fastPollTimer = setInterval(executar, 750);
+    fastPollTimer = setInterval(executar, 500);
   }
 
   window.enviarComando = async function enviarComandoV2(acao) {
@@ -197,7 +253,7 @@
     envioEmCurso = true;
 
     pendingAction = acao;
-    statusEl.textContent = 'AGUARDANDO ESP32...';
+    statusEl.textContent = 'ENVIANDO COMANDO...';
     statusEl.classList.remove('ligado', 'desligado');
     aplicarEstado(acao === 'desligar' ? 'stopping' : 'starting');
 
@@ -211,7 +267,7 @@
         statusEl.textContent = 'COMANDO PENDENTE / OFFLINE';
         aplicarEstado('offline');
       } else {
-        statusEl.textContent = 'AGUARDANDO ESP32...';
+        statusEl.textContent = 'AGUARDANDO RETORNO DO MOTOR...';
         iniciarConsultaRapida();
       }
     } catch (err) {
@@ -239,7 +295,8 @@
   const observer = new MutationObserver(() => {
     const texto = (statusEl.textContent || '').trim().toUpperCase();
     if (texto.includes('SEM CONTROLADOR')) return aplicarEstado('disconnected');
-    if (texto.includes('PENDENTE') || texto.includes('AGUARDANDO')) {
+    if (texto.includes('MOTOR DESLIGADO') || texto.includes('RETORNO ATIVO')) return;
+    if (texto.includes('PENDENTE') || texto.includes('AGUARDANDO') || texto.includes('ENVIANDO')) {
       return aplicarEstado(pendingAction === 'desligar' ? 'stopping' : 'starting');
     }
     if (texto === 'LIGADO') return aplicarEstado('running');
