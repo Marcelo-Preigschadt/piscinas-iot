@@ -2,6 +2,9 @@
   const CONTROL = 'https://wqjzrbhbkienlxocykcn.supabase.co/functions/v1/piscinas-control';
   const statusEl = document.getElementById('statusMotor');
   const deviceLine = document.getElementById('deviceStatusLine');
+  const relayStateEl = document.getElementById('relayState');
+  const motorReturnEl = document.getElementById('motorReturnState');
+  const safetyStateEl = document.getElementById('safetyState');
   const botoes = document.querySelector('.motor-buttons');
   const btnLigar = document.querySelector('.motor-buttons .ligar');
   const btnDesligar = document.querySelector('.motor-buttons .desligar');
@@ -52,6 +55,20 @@
     try { return piscinaSelecionada || null; } catch (_) { return null; }
   }
 
+  function limparClassesDiag(el) {
+    if (!el) return;
+    const item = el.closest('.motor-diag-item');
+    item?.classList.remove('is-ok', 'is-warn', 'is-fault', 'is-stale');
+    return item;
+  }
+
+  function diag(el, texto, classe = '') {
+    if (!el) return;
+    el.textContent = texto;
+    const item = limparClassesDiag(el);
+    if (classe) item?.classList.add(classe);
+  }
+
   function aplicarEstado(estado) {
     visual.classList.remove(
       'is-stopped',
@@ -66,10 +83,10 @@
 
     const textos = {
       stopped: ['Motor parado', 'Pronto para acionamento'],
-      running: ['Bomba em funcionamento', 'Retorno do motor confirmado pelo GPIO 27'],
-      starting: ['Acionando bomba…', 'Aguardando confirmação física pelo GPIO 27'],
-      stopping: ['Desligando bomba…', 'Aguardando confirmação física pelo GPIO 27'],
-      offline: ['Controlador offline', 'Sem comunicação com o AquaControl'],
+      running: ['Bomba em funcionamento', 'Retorno físico confirmado pelo GPIO 27'],
+      starting: ['Acionando bomba…', 'Aguardando retorno físico do motor'],
+      stopping: ['Desligando bomba…', 'Aguardando retorno físico desligado'],
+      offline: ['Controlador sem comunicação', 'O estado do motor não pode ser confirmado agora'],
       disconnected: ['Sem controlador', 'Vincule um ESP32 para controlar a bomba']
     };
 
@@ -77,23 +94,39 @@
     hintEl.textContent = textos[estado][1];
   }
 
-  function aplicarFalhaRetorno(data) {
-    visual.classList.remove('is-running', 'is-starting', 'is-stopping', 'is-offline', 'is-disconnected');
-    visual.classList.add('is-stopped');
-    visual.dataset.state = 'fault';
+  function motivoBloqueioTexto(motivo) {
+    const textos = {
+      retorno_perdido: 'Retorno perdido durante o funcionamento',
+      sem_retorno_apos_comando: 'Motor não confirmou a partida após o comando',
+      motor_permanece_ligado: 'Motor continuou ativo após comando de desligamento'
+    };
+    return textos[motivo] || 'Intervenção local ou falha detectada';
+  }
 
-    if (data?.rele === 'ligado' && data?.motor !== 'ligado') {
-      stateEl.textContent = 'Motor sem retorno';
-      hintEl.textContent = 'Relé ligado, mas o GPIO 27 não confirma funcionamento';
+  function aplicarBloqueio(data) {
+    const motorLigado = data?.motor === 'ligado';
+    statusEl.classList.remove('ligado', 'desligado');
+    statusEl.classList.add(motorLigado ? 'ligado' : 'desligado');
+
+    if (motorLigado) {
+      statusEl.textContent = 'MOTOR LIGADO SEM COMANDO REMOTO';
+      aplicarEstado('running');
+      stateEl.textContent = 'Motor ligado localmente';
     } else {
-      stateEl.textContent = 'Retorno incompatível';
-      hintEl.textContent = 'GPIO 27 indica motor ativo com o relé desligado';
+      statusEl.textContent = 'DESLIGADO / REARME BLOQUEADO';
+      aplicarEstado('stopped');
+      stateEl.textContent = 'Motor desligado por segurança';
     }
+
+    hintEl.textContent = `${motivoBloqueioTexto(data?.motivo_bloqueio)}. Envie um novo comando para rearmar.`;
   }
 
   function atualizarLinhaControlador(data) {
     if (!deviceLine || !data) return;
     const id = data.device_id || 'controlador';
+    const segundos = Number.isFinite(Number(data.segundos_sem_ping))
+      ? Number(data.segundos_sem_ping)
+      : null;
 
     if (data.status === 'online') {
       const rede = data.wifi_ssid ? ` • Wi-Fi: ${data.wifi_ssid}` : '';
@@ -102,13 +135,52 @@
       return;
     }
 
-    const ultimaRede = data.ultima_rede_conhecida
-      ? ` • Última rede conhecida: ${data.ultima_rede_conhecida}`
-      : '';
-    const tempo = Number.isFinite(Number(data.segundos_sem_ping))
-      ? ` • sem comunicação há ${Number(data.segundos_sem_ping)} s`
-      : '';
-    deviceLine.textContent = `Controlador: ${id} • OFFLINE${ultimaRede}${tempo}`;
+    if (data.status === 'instavel') {
+      const tempo = segundos !== null ? ` • último contato há ${segundos} s` : '';
+      const rede = data.ultima_rede_conhecida ? ` • última rede: ${data.ultima_rede_conhecida}` : '';
+      deviceLine.textContent = `Controlador: ${id} • CONEXÃO INSTÁVEL${tempo}${rede}`;
+      return;
+    }
+
+    const tempo = segundos !== null ? ` • sem comunicação há ${segundos} s` : '';
+    const ultimaRede = data.ultima_rede_conhecida ? ` • última rede: ${data.ultima_rede_conhecida}` : '';
+    deviceLine.textContent = `Controlador: ${id} • OFFLINE${tempo}${ultimaRede}`;
+  }
+
+  function atualizarDiagnostico(data) {
+    if (!data) return;
+    const stale = data.status !== 'online';
+    const prefixo = stale ? 'ÚLTIMO: ' : '';
+
+    if (data.rele === 'ligado') diag(relayStateEl, `${prefixo}LIGADO`, stale ? 'is-stale' : 'is-ok');
+    else if (data.rele === 'desligado') diag(relayStateEl, `${prefixo}DESLIGADO`, stale ? 'is-stale' : '');
+    else diag(relayStateEl, 'SEM DADO', 'is-stale');
+
+    if (data.motor === 'ligado') diag(motorReturnEl, `${prefixo}LIGADO`, stale ? 'is-stale' : 'is-ok');
+    else if (data.motor === 'desligado') diag(motorReturnEl, `${prefixo}DESLIGADO`, stale ? 'is-stale' : '');
+    else diag(motorReturnEl, 'SEM DADO', 'is-stale');
+
+    if (data.bloqueio_rearme) {
+      diag(safetyStateEl, `BLOQUEADO — ${motivoBloqueioTexto(data.motivo_bloqueio)}`, 'is-fault');
+      return;
+    }
+
+    if (data.rele === 'ligado' && data.motor === 'desligado') {
+      diag(safetyStateEl, 'SEM RETORNO — desligamento manual ou falha', 'is-warn');
+      return;
+    }
+
+    if (data.rele === 'desligado' && data.motor === 'ligado') {
+      diag(safetyStateEl, 'MOTOR LIGADO LOCALMENTE', 'is-warn');
+      return;
+    }
+
+    if (stale) {
+      diag(safetyStateEl, 'ESTADO NÃO ATUALIZADO — conexão instável/offline', 'is-stale');
+      return;
+    }
+
+    diag(safetyStateEl, 'NORMAL', 'is-ok');
   }
 
   async function controlFetch(path, options = {}) {
@@ -146,12 +218,21 @@
     if (!data) return false;
 
     atualizarLinhaControlador(data);
+    atualizarDiagnostico(data);
 
     if (data.status === 'offline') {
-      statusEl.textContent = data.pendente ? 'COMANDO PENDENTE / OFFLINE' : 'OFFLINE';
+      statusEl.textContent = 'SEM COMUNICAÇÃO';
       statusEl.classList.remove('ligado');
       statusEl.classList.add('desligado');
       aplicarEstado('offline');
+      return false;
+    }
+
+    if (data.bloqueio_rearme) {
+      pendingAction = null;
+      pendingSeq = 0;
+      pararConsultaRapida();
+      aplicarBloqueio(data);
       return false;
     }
 
@@ -168,11 +249,10 @@
       const falhaDeRetorno = retornoIncompativel && idadeComandoMs(data) >= 3000;
       if (falhaDeRetorno) {
         statusEl.textContent = data.rele === 'ligado'
-          ? 'MOTOR DESLIGADO / RELÉ LIGADO'
-          : 'RETORNO ATIVO / RELÉ DESLIGADO';
-        statusEl.classList.remove('ligado');
-        statusEl.classList.add('desligado');
-        aplicarFalhaRetorno(data);
+          ? 'AGUARDANDO RETORNO DO MOTOR'
+          : 'AGUARDANDO DESLIGAMENTO DO MOTOR';
+        statusEl.classList.remove('ligado', 'desligado');
+        aplicarEstado(acao === 'desligar' ? 'stopping' : 'starting');
       } else {
         statusEl.textContent = 'AGUARDANDO RETORNO DO MOTOR...';
         statusEl.classList.remove('ligado', 'desligado');
@@ -181,16 +261,36 @@
       return false;
     }
 
+    if (data.status === 'instavel') {
+      const ultimo = data.motor === 'ligado' ? 'LIGADO' : 'DESLIGADO';
+      statusEl.textContent = `ÚLTIMO ESTADO: ${ultimo}`;
+      statusEl.classList.remove('ligado', 'desligado');
+      statusEl.classList.add(data.motor === 'ligado' ? 'ligado' : 'desligado');
+      aplicarEstado(data.motor === 'ligado' ? 'running' : 'stopped');
+      hintEl.textContent = 'Conexão instável: aguardando novo heartbeat do controlador';
+      return false;
+    }
+
     if (retornoIncompativel) {
       pendingAction = null;
       pendingSeq = 0;
       pararConsultaRapida();
-      statusEl.textContent = data.rele === 'ligado'
-        ? 'MOTOR DESLIGADO / RELÉ LIGADO'
-        : 'RETORNO ATIVO / RELÉ DESLIGADO';
-      statusEl.classList.remove('ligado');
-      statusEl.classList.add('desligado');
-      aplicarFalhaRetorno(data);
+
+      if (data.rele === 'ligado') {
+        statusEl.textContent = 'MOTOR SEM RETORNO';
+        statusEl.classList.remove('ligado');
+        statusEl.classList.add('desligado');
+        aplicarEstado('stopped');
+        stateEl.textContent = 'Motor sem retorno';
+        hintEl.textContent = 'Relé remoto ligado, mas o GPIO 27 indica motor desligado';
+      } else {
+        statusEl.textContent = 'MOTOR LIGADO LOCALMENTE';
+        statusEl.classList.remove('desligado');
+        statusEl.classList.add('ligado');
+        aplicarEstado('running');
+        stateEl.textContent = 'Motor ligado localmente';
+        hintEl.textContent = 'GPIO 27 indica motor ligado sem comando do relé remoto';
+      }
       return false;
     }
 
@@ -225,7 +325,7 @@
     }
   }
 
-  window.carregarPainelIoT = async function carregarPainelIoTV2() {
+  window.carregarPainelIoT = async function carregarPainelIoTV3() {
     if (painelOriginal) {
       try { await painelOriginal(); } catch (_) {}
     }
@@ -233,10 +333,6 @@
       await consultarControle();
     } catch (err) {
       console.error('Controle do motor:', err);
-      if (pendingAction) {
-        statusEl.textContent = 'AGUARDANDO RETORNO DO MOTOR...';
-        aplicarEstado(pendingAction === 'desligar' ? 'stopping' : 'starting');
-      }
     }
   };
 
@@ -247,6 +343,10 @@
     const executar = async () => {
       try {
         const data = await consultarControle();
+        if (data?.bloqueio_rearme) {
+          pararConsultaRapida();
+          return;
+        }
         if (data && !data.pendente && pendingAction && estadoConfirmado(pendingAction, data.motor)) {
           pendingAction = null;
           pendingSeq = 0;
@@ -274,7 +374,7 @@
     }, 3000);
   }
 
-  window.enviarComando = async function enviarComandoV2(acao) {
+  window.enviarComando = async function enviarComandoV3(acao) {
     const piscina = piscinaAtual();
     if (!piscina || envioEmCurso) return;
     envioEmCurso = true;
@@ -291,7 +391,7 @@
 
       pendingSeq = Number(data.comando_seq || 0);
       if (data.dispositivo === 'offline') {
-        statusEl.textContent = 'COMANDO PENDENTE / OFFLINE';
+        statusEl.textContent = 'COMANDO PENDENTE / CONTROLADOR OFFLINE';
         aplicarEstado('offline');
       } else {
         statusEl.textContent = 'AGUARDANDO RETORNO DO MOTOR...';
@@ -322,13 +422,12 @@
   const observer = new MutationObserver(() => {
     const texto = (statusEl.textContent || '').trim().toUpperCase();
     if (texto.includes('SEM CONTROLADOR')) return aplicarEstado('disconnected');
-    if (texto.includes('MOTOR DESLIGADO') || texto.includes('RETORNO ATIVO')) return;
+    if (texto.includes('SEM COMUNICAÇÃO')) return aplicarEstado('offline');
+    if (texto.includes('REARME BLOQUEADO')) return;
+    if (texto.includes('MOTOR SEM RETORNO') || texto.includes('MOTOR LIGADO LOCALMENTE')) return;
     if (texto.includes('PENDENTE') || texto.includes('AGUARDANDO') || texto.includes('ENVIANDO')) {
       return aplicarEstado(pendingAction === 'desligar' ? 'stopping' : 'starting');
     }
-    if (texto === 'LIGADO') return aplicarEstado('running');
-    if (texto === 'DESLIGADO') return aplicarEstado('stopped');
-    if (texto.includes('OFFLINE')) return aplicarEstado('offline');
   });
 
   observer.observe(statusEl, { childList: true, characterData: true, subtree: true });
