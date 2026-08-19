@@ -20,6 +20,43 @@
   box-shadow: none;
 }
 
+.motor-diagnostics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0 2px;
+}
+
+.motor-diag-item {
+  padding: 10px 11px;
+  border-radius: 11px;
+  border: 1px solid rgba(126,205,230,.16);
+  background: rgba(255,255,255,.035);
+}
+
+.motor-diag-item span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: rgba(220,244,252,.58);
+}
+
+.motor-diag-item strong {
+  display: block;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #eefbff;
+}
+
+.motor-diag-wide { grid-column: 1 / -1; }
+.motor-diag-item.is-ok strong { color: #8cf1bd; }
+.motor-diag-item.is-warn strong { color: #ffd58a; }
+.motor-diag-item.is-fault strong { color: #ffaaa0; }
+.motor-diag-item.is-stale strong { color: #c5d2d8; }
+
 .motor-visual {
   margin-top: 18px;
   padding: 15px 16px 13px;
@@ -75,7 +112,6 @@
   position: relative;
 }
 
-/* Bomba centrífuga de piscina — corpo inteiro estático. */
 .pump-machine {
   width: 250px;
   height: 102px;
@@ -83,7 +119,6 @@
   filter: drop-shadow(0 14px 14px rgba(0,0,0,.20));
 }
 
-/* Motor elétrico cilíndrico simplificado. */
 .pump-motor {
   position: absolute;
   left: 13px;
@@ -126,7 +161,6 @@
   border: 1px solid rgba(174,235,255,.28);
 }
 
-/* Carcaça em voluta da bomba. */
 .pump-volute {
   position: absolute;
   left: 130px;
@@ -139,7 +173,6 @@
   box-shadow: inset 0 0 0 5px rgba(2,39,54,.20);
 }
 
-/* Saída tangencial superior: característica visual de bomba centrífuga. */
 .pump-outlet {
   position: absolute;
   left: 168px;
@@ -164,7 +197,6 @@
   border: 1px solid rgba(158,224,245,.26);
 }
 
-/* Entrada axial frontal. */
 .pump-inlet {
   position: absolute;
   left: 195px;
@@ -189,7 +221,6 @@
   border: 1px solid rgba(158,224,245,.25);
 }
 
-/* Rotor/impulsor: é o único elemento mecânico animado. */
 .pump-rotor {
   position: absolute;
   left: 150px;
@@ -216,9 +247,7 @@
   background: linear-gradient(90deg, #d6f8ff, #78d9f3);
 }
 
-.pump-rotor::after {
-  transform: rotate(90deg);
-}
+.pump-rotor::after { transform: rotate(90deg); }
 
 .pump-rotor-center {
   position: absolute;
@@ -266,18 +295,9 @@
   color: rgba(220,244,252,.65);
 }
 
-/* Somente o rotor gira. O corpo da bomba não vibra, não pulsa e não se desloca. */
-.motor-visual.is-running .pump-rotor {
-  animation: pumpRotorSpin .68s linear infinite;
-}
-
-.motor-visual.is-starting .pump-rotor {
-  animation: pumpRotorStart .42s linear infinite;
-}
-
-.motor-visual.is-stopping .pump-rotor {
-  animation: pumpRotorStop 1.20s linear infinite;
-}
+.motor-visual.is-running .pump-rotor { animation: pumpRotorSpin .68s linear infinite; }
+.motor-visual.is-starting .pump-rotor { animation: pumpRotorStart .42s linear infinite; }
+.motor-visual.is-stopping .pump-rotor { animation: pumpRotorStop 1.20s linear infinite; }
 
 .motor-visual.is-running .motor-visual-state { color: #8cf1bd; }
 .motor-visual.is-starting .motor-visual-state { color: #7fe6ff; }
@@ -294,21 +314,11 @@
 }
 
 .motor-visual.is-offline .motor-visual-state,
-.motor-visual.is-disconnected .motor-visual-state {
-  color: #c1ccd2;
-}
+.motor-visual.is-disconnected .motor-visual-state { color: #c1ccd2; }
 
-@keyframes pumpRotorSpin {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes pumpRotorStart {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes pumpRotorStop {
-  to { transform: rotate(360deg); }
-}
+@keyframes pumpRotorSpin { to { transform: rotate(360deg); } }
+@keyframes pumpRotorStart { to { transform: rotate(360deg); } }
+@keyframes pumpRotorStop { to { transform: rotate(360deg); } }
 
 @media (max-width: 700px) {
   .motor-visual { margin-top: 15px; }
