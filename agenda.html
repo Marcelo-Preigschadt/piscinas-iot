@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="css/agenda.css?v=20260814-11">
   <link rel="stylesheet" href="css/equipamentos.css?v=20260814-11">
   <link rel="stylesheet" href="css/card-effects.css?v=20260814-2">
-  <link rel="stylesheet" href="css/motor-animation.css?v=20260814-2">
+  <link rel="stylesheet" href="css/motor-animation.css?v=20260819-3">
 </head>
 <body>
 <header class="appbar">
@@ -33,7 +33,12 @@
     <div class="dashboard-grid">
       <section class="panel-card motor-control-card">
         <span class="card-kicker">AUTOMAÇÃO</span><h2>Controle do motor</h2>
-        <div class="status-label">Estado atual</div><span id="statusMotor" class="status-motor">DESLIGADO</span>
+        <div class="status-label">Estado atual do motor</div><span id="statusMotor" class="status-motor">DESLIGADO</span>
+        <div class="motor-diagnostics" aria-label="Diagnóstico do acionamento">
+          <div class="motor-diag-item"><span>Relé remoto</span><strong id="relayState">--</strong></div>
+          <div class="motor-diag-item"><span>Retorno do motor</span><strong id="motorReturnState">--</strong></div>
+          <div class="motor-diag-item motor-diag-wide"><span>Segurança</span><strong id="safetyState">Verificando...</strong></div>
+        </div>
         <div class="motor-buttons"><button class="ligar" onclick="ligarMotor()">Ligar motor</button><button class="desligar" onclick="desligarMotor()">Desligar motor</button></div>
       </section>
 
@@ -124,6 +129,6 @@
   </section>
 </main>
 <script src="js/agenda.js?v=20260814-10"></script>
-<script src="js/motor-animation.js?v=20260819-2"></script>
+<script src="js/motor-animation.js?v=20260819-3"></script>
 </body>
 </html>
