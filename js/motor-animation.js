@@ -40,6 +40,8 @@
   let pendingSeq = 0;
   let fastPollTimer = null;
   let fastPollStartedAt = 0;
+  let monitorContinuoTimer = null;
+  let consultaEmCurso = false;
   let envioEmCurso = false;
 
   const painelOriginal = typeof window.carregarPainelIoT === 'function'
@@ -198,12 +200,17 @@
 
   async function consultarControle() {
     const piscina = piscinaAtual();
-    if (!piscina) return null;
-    const res = await controlFetch(`/motor/${piscina.id}/status`);
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.erro || 'Erro ao consultar o controlador');
-    renderizarControle(data);
-    return data;
+    if (!piscina || consultaEmCurso) return null;
+    consultaEmCurso = true;
+    try {
+      const res = await controlFetch(`/motor/${piscina.id}/status`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.erro || 'Erro ao consultar o controlador');
+      renderizarControle(data);
+      return data;
+    } finally {
+      consultaEmCurso = false;
+    }
   }
 
   window.carregarPainelIoT = async function carregarPainelIoTV2() {
@@ -245,6 +252,14 @@
 
     executar();
     fastPollTimer = setInterval(executar, 500);
+  }
+
+  function iniciarMonitorContinuo() {
+    if (monitorContinuoTimer) return;
+    monitorContinuoTimer = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      consultarControle().catch(() => {});
+    }, 1000);
   }
 
   window.enviarComando = async function enviarComandoV2(acao) {
@@ -306,7 +321,13 @@
 
   observer.observe(statusEl, { childList: true, characterData: true, subtree: true });
 
+  window.addEventListener('beforeunload', () => {
+    pararConsultaRapida();
+    if (monitorContinuoTimer) clearInterval(monitorContinuoTimer);
+  });
+
   setTimeout(() => {
     window.carregarPainelIoT?.();
+    iniciarMonitorContinuo();
   }, 250);
 })();
