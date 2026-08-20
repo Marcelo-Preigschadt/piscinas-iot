@@ -19,6 +19,15 @@
       });
   }
 
+  function carregarConsumoMultimotor() {
+    if (document.querySelector('script[data-multi-motor-consumption]')) return;
+    const script = document.createElement('script');
+    script.src = 'js/multi-motor-consumption.js?v=20260820-1';
+    script.dataset.multiMotorConsumption = '1';
+    script.async = false;
+    document.body.appendChild(script);
+  }
+
   const observer = new MutationObserver(() => liberarComandosDosMotores());
   observer.observe(document.documentElement, {
     subtree: true,
@@ -28,7 +37,11 @@
   });
 
   document.addEventListener('visibilitychange', liberarComandosDosMotores);
-  document.addEventListener('DOMContentLoaded', liberarComandosDosMotores);
+  document.addEventListener('DOMContentLoaded', () => {
+    liberarComandosDosMotores();
+    carregarConsumoMultimotor();
+  });
   setInterval(liberarComandosDosMotores, 250);
   liberarComandosDosMotores();
+  carregarConsumoMultimotor();
 })();
