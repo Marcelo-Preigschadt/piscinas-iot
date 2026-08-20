@@ -40,5 +40,38 @@
 .multi-motor-modal-status.error{color:#ffaaa0}
 .multi-motor-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(126,205,230,.12)}
 body.modal-open{overflow:hidden}
+
+/* Cards ficam sobre a área clara da agenda. Mantém contraste alto sem alterar o modal escuro. */
+.multi-motor-section{color:#123449}
+.multi-motor-heading p{color:#657a87}
+.multi-motor-status{background:#f5fafc;border-color:#d5e4eb;color:#526b79}
+.multi-motor-card{background:#fff;border-color:#d5e4eb;box-shadow:0 10px 28px rgba(9,47,68,.08)}
+.multi-motor-card-head h3{color:#12384e}
+.multi-motor-card-head p{color:#657a87}
+.multi-motor-channel{color:#008cbe}
+.multi-motor-state-chip{background:#eef2f4;color:#526b79;border-color:#d9e4e9}
+.multi-motor-state-chip.online{background:#e6f9ef;color:#167347;border-color:#bde8cf}
+.multi-motor-state-chip.instavel{background:#fff5df;color:#946300;border-color:#f0d89c}
+.multi-motor-state-chip.offline{background:#fff0ee;color:#c64b3d;border-color:#f1c5bf}
+.multi-motor-spec-line{color:#526b79}
+.multi-motor-card .motor-visual{background:linear-gradient(145deg,#f7fbfd,#edf7fb);border-color:#d2e7ef}
+.multi-motor-card .motor-visual-label{color:#28718d}
+.multi-motor-card .motor-visual-state{color:#173e54}
+.multi-motor-card .motor-visual-hint{color:#657a87}
+.multi-motor-card .motor-visual.is-offline .motor-visual-state,
+.multi-motor-card .motor-visual.is-disconnected .motor-visual-state{color:#5d707c}
+.multi-motor-card .motor-diag-item{background:#f7fafb;border-color:#dce8ed}
+.multi-motor-card .motor-diag-item span{color:#617682}
+.multi-motor-card .motor-diag-item strong{color:#244b5f}
+.multi-motor-card .motor-diag-item.is-ok strong{color:#167347}
+.multi-motor-card .motor-diag-item.is-warn strong{color:#946300}
+.multi-motor-card .motor-diag-item.is-fault strong{color:#c64b3d}
+.multi-motor-card .motor-diag-item.is-stale strong{color:#5d707c}
+.multi-motor-details span{background:#f7fafb;border-color:#dce8ed;color:#244b5f}
+.multi-motor-details strong{color:#617682}
+.multi-motor-note{border-left-color:#37a7cd;background:#eef8fb;color:#486676}
+.multi-motor-admin-actions{border-top-color:#dce8ed}
+.multi-motor-empty{border-color:#c8dce5;color:#657a87}
+
 @media(max-width:980px){.multi-motor-grid{grid-template-columns:1fr}}
 @media(max-width:700px){.multi-motor-heading{flex-direction:column}.multi-motor-heading button{width:100%}.multi-motor-card{padding:15px}.multi-motor-form-grid{grid-template-columns:1fr}.multi-motor-form-grid .field-wide{grid-column:auto}.multi-motor-modal{padding:10px}.multi-motor-modal-card{padding:17px}.multi-motor-details{grid-template-columns:1fr}.multi-motor-admin-actions{justify-content:stretch}.multi-motor-admin-actions button{flex:1}}
