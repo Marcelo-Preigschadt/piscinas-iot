@@ -1,0 +1,53 @@
+name: Backup lógico semanal do Supabase
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Domingo 03:15 em Brasília (06:15 UTC)
+    - cron: '15 6 * * 0'
+
+permissions:
+  contents: write
+
+jobs:
+  backup-db:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gerar backup lógico criptografado
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p backups/database
+          DATA=$(date -u +'%Y-%m-%d_%H-%M-%S')
+          ARQUIVO="backups/database/supabase-logical-${DATA}.json.enc"
+          URL='https://wqjzrbhbkienlxocykcn.supabase.co/functions/v1/piscinas-maintenance/backup'
+
+          curl --fail --silent --show-error --max-time 120 \
+            -X POST "$URL" \
+            -o "$ARQUIVO"
+
+          jq -e '
+            .format == "quatrin-aquacontrol-encrypted-backup-v1" and
+            .algorithm == "AES-256-GCM" and
+            (.ciphertext_b64 | type == "string" and length > 100)
+          ' "$ARQUIVO" >/dev/null
+
+          echo "DB_BACKUP_FILE=$ARQUIVO" >> "$GITHUB_ENV"
+          echo "Backup gerado: $ARQUIVO"
+          jq '{generated_at, project_ref, row_counts, algorithm, key_id}' "$ARQUIVO"
+
+      - name: Salvar backup no repositório
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git pull --rebase origin master
+          git add "$DB_BACKUP_FILE"
+          git commit -m "Backup lógico semanal do Supabase [skip backup]"
+          git push origin HEAD:master
