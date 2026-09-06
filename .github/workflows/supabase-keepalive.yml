@@ -5,6 +5,11 @@ on:
   schedule:
     # Todos os dias 06:00 em Brasília (09:00 UTC)
     - cron: '0 9 * * *'
+  push:
+    branches:
+      - master
+    paths:
+      - '.github/workflows/supabase-keepalive.yml'
 
 permissions:
   contents: read
