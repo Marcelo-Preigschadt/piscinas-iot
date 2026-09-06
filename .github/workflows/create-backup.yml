@@ -2,6 +2,9 @@ name: Criar backup ZIP
 
 on:
   workflow_dispatch:
+  schedule:
+    # Domingo 03:00 em Brasília (06:00 UTC)
+    - cron: '0 6 * * 0'
   push:
     branches:
       - master
@@ -36,6 +39,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git pull --rebase origin master
           git add "$BACKUP_FILE"
-          git commit -m "Backup completo do sistema [skip backup]"
+          git commit -m "Backup semanal do sistema [skip backup]"
           git push origin HEAD:master
