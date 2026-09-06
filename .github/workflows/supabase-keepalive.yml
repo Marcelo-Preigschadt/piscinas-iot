@@ -1,0 +1,33 @@
+name: Supabase keep-alive diário
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Todos os dias 06:00 em Brasília (09:00 UTC)
+    - cron: '0 9 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Executar atividade real no PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL='https://wqjzrbhbkienlxocykcn.supabase.co/functions/v1/piscinas-maintenance/keepalive'
+
+          for tentativa in 1 2 3; do
+            if RESPOSTA=$(curl --fail --silent --show-error --max-time 30 "$URL"); then
+              echo "$RESPOSTA" | jq -e '.ok == true and .database_activity == true' >/dev/null
+              echo "Keep-alive concluído: $(echo "$RESPOSTA" | jq -r '.checked_at')"
+              exit 0
+            fi
+            echo "Tentativa $tentativa falhou; aguardando antes de repetir..."
+            sleep $((tentativa * 10))
+          done
+
+          echo 'Falha ao executar o keep-alive após 3 tentativas.' >&2
+          exit 1
