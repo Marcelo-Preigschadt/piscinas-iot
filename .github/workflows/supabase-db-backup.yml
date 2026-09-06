@@ -5,6 +5,11 @@ on:
   schedule:
     # Domingo 03:15 em Brasília (06:15 UTC)
     - cron: '15 6 * * 0'
+  push:
+    branches:
+      - master
+    paths:
+      - '.github/workflows/supabase-db-backup.yml'
 
 permissions:
   contents: write
