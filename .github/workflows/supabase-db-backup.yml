@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -30,17 +30,34 @@ jobs:
           mkdir -p backups/database
           DATA=$(date -u +'%Y-%m-%d_%H-%M-%S')
           ARQUIVO="backups/database/supabase-logical-${DATA}.json.enc"
+          TEMP_FILE="${ARQUIVO}.tmp"
           URL='https://wqjzrbhbkienlxocykcn.supabase.co/functions/v1/piscinas-maintenance/backup'
 
-          curl --fail --silent --show-error --max-time 120 \
-            -X POST "$URL" \
-            -o "$ARQUIVO"
+          rm -f "$TEMP_FILE"
 
+          # A Edge Function pode estar em cold start ou sofrer uma queda transitória
+          # da conexão. Fazemos novas tentativas inclusive para erros de transporte
+          # (ex.: curl 56 / connection reset by peer) e forçamos HTTP/1.1.
+          curl --fail-with-body --silent --show-error \
+            --http1.1 \
+            --connect-timeout 20 \
+            --max-time 180 \
+            --retry 5 \
+            --retry-all-errors \
+            --retry-delay 10 \
+            --retry-max-time 600 \
+            -X POST "$URL" \
+            -o "$TEMP_FILE"
+
+          # Só transforma o arquivo temporário em backup definitivo depois de
+          # confirmar que a resposta é um backup criptografado íntegro.
           jq -e '
             .format == "quatrin-aquacontrol-encrypted-backup-v1" and
             .algorithm == "AES-256-GCM" and
             (.ciphertext_b64 | type == "string" and length > 100)
-          ' "$ARQUIVO" >/dev/null
+          ' "$TEMP_FILE" >/dev/null
+
+          mv "$TEMP_FILE" "$ARQUIVO"
 
           echo "DB_BACKUP_FILE=$ARQUIVO" >> "$GITHUB_ENV"
           echo "Backup gerado: $ARQUIVO"
